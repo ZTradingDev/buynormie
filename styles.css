@@ -252,3 +252,40 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
 @media(max-width:800px){.account-pill{padding:6px 12px;min-height:34px;font-size:13px}}
 @media(max-width:420px){.account-pill{display:none}}
 .account-code{font-family:inherit;font-weight:700;letter-spacing:.08em;background:var(--sand);border:1px dashed var(--ink);border-radius:8px;padding:2px 8px;user-select:all}
+
+/* ---------- account + mobile polish ---------- */
+.account-pill{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.account-pill svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;flex:none}
+.account-pill.signed-in{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+@media(max-width:800px){
+ .account-pill{border:0;padding:0;min-height:40px;width:40px;justify-content:center;margin-right:0;border-radius:50%}
+ .account-pill .account-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ .account-pill svg{width:22px;height:22px}
+ .account-pill.signed-in{background:var(--ink);color:var(--cream)}
+}
+@media(max-width:420px){.account-pill{display:inline-flex}}
+
+/* account window becomes a bottom sheet on phones */
+@media(max-width:600px){
+ .account-dlg{width:100%;max-width:100%;max-height:92dvh;margin:auto 0 0;border-radius:22px 22px 0 0}
+ .account-dlg[open]{animation:sheetin 340ms var(--ease)}
+ .account-body{padding:40px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+ .account-body h2{font-size:32px}
+ .rewards-field{flex-direction:column}
+ .rewards-field input{flex:none;width:100%}
+ .rewards-field .pop-btn{width:100%}
+ .rewards-pop{width:calc(100% - 24px);max-height:calc(100dvh - 24px)}
+ .rewards-pop-body{gap:12px}
+ .rewards-pop-body h2{font-size:30px}
+ .order-bar{flex-direction:column;align-items:stretch;padding:18px}
+ .order-bar .order-checkout{width:100%}
+ .order-bar .order-summary{justify-content:space-between}
+ .account-code{display:inline-block;margin-top:6px;font-size:16px}
+ .site-toast{bottom:calc(16px + env(safe-area-inset-bottom,0px));font-size:13px}
+}
+@keyframes sheetin{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.mobile-menu-links a[data-account-open]{font-weight:700}
+@media(max-width:800px){
+ .header-inner{position:relative}
+ .header-inner .account-pill{position:absolute;left:calc(max(16px, env(safe-area-inset-left, 0px)) + 46px);top:50%;transform:translateY(-50%)}
+}

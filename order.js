@@ -75,9 +75,9 @@ $$('[data-rewards-form]').forEach(form => {
 
 /* ---------- account dialog ---------- */
 const dlg = $('[data-account]');
-const accountBtns = $$('[data-account-open]');
 async function renderAccount() {
-  accountBtns.forEach(b => { b.textContent = session ? 'account' : 'sign in'; });
+  document.querySelectorAll('[data-account-label]').forEach(b => { b.textContent = session ? 'account' : 'sign in'; });
+  document.querySelectorAll('.account-pill').forEach(b => b.classList.toggle('signed-in', Boolean(session)));
   if (!dlg) return;
   $('[data-account-out]', dlg).hidden = Boolean(session);
   $('[data-account-in]', dlg).hidden = !session;
@@ -101,7 +101,21 @@ async function renderAccount() {
     return li;
   }) : [Object.assign(document.createElement('li'), { className: 'muted', textContent: 'No orders yet.' })]));
 }
-accountBtns.forEach(b => b.addEventListener('click', () => { dlg?.showModal(); renderAccount(); }));
+function openAccount() {
+  if (!dlg) return;
+  document.querySelectorAll('dialog[open]').forEach(d => { if (d !== dlg) d.close(); });
+  if (!dlg.open) dlg.showModal();
+  renderAccount();
+}
+// delegated: header icon, mobile menu link, rewards section link
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-account-open]');
+  if (!t || !dlg) return;
+  e.preventDefault();
+  openAccount();
+});
+if (location.hash === '#account') setTimeout(openAccount, 300);
+addEventListener('hashchange', () => { if (location.hash === '#account') openAccount(); });
 $$('[data-account-close]', dlg || document).forEach(b => b.addEventListener('click', () => dlg.close()));
 dlg?.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
 const signinForm = $('[data-signin-form]');
@@ -171,7 +185,7 @@ if (pop && typeof pop.showModal === 'function') {
   $$('[data-pop-close]', pop).forEach(b => b.addEventListener('click', close));
   pop.addEventListener('click', e => { if (e.target === pop) close(); });
   setTimeout(() => {
-    if (dismissed || session || params.has('checkout') || document.querySelector('dialog[open]')) return;
+    if (dismissed || session || location.hash === '#account' || params.has('checkout') || document.querySelector('dialog[open]')) return;
     pop.showModal();
     if (video && !matchMedia('(prefers-reduced-motion: reduce)').matches) video.play().catch(() => {});
   }, 700);
