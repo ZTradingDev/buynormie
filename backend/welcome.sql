@@ -43,12 +43,12 @@ begin
   <div style="max-width:480px;margin:0 auto;background:#fbf8f2;border:1px solid #e3dccf;border-radius:20px;padding:36px 32px">
     <p style="margin:0 0 28px;font-size:28px;font-weight:700;letter-spacing:-1px">normie.</p>
     <h1 style="margin:0 0 12px;font-size:26px;font-weight:400;letter-spacing:-0.5px;line-height:1.15">welcome to normie.</h1>
-    <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#5d6a5f">Thanks for joining. Here is %s%% off your first box: 4 matcha, 4 açaí and 4 coffee sticks. Every box you order also earns a rewards stamp, and 5 stamps get you a free box.</p>
+    <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#5d6a5f">Thanks for joining. Here is %s%% off your first box. Build a 6-pack or 12-pack of matcha, açaí and coffee sticks, mixed your way. Every box you order also earns a rewards stamp, and 5 stamps get you a free box.</p>
     <div style="border:1.5px dashed #304236;border-radius:14px;padding:18px;text-align:center;margin:0 0 24px">
       <p style="margin:0 0 6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#5d6a5f">your code</p>
       <p style="margin:0;font-size:26px;font-weight:700;letter-spacing:2px">%s</p>
     </div>
-    <a href="https://buynormie.com/#order" style="display:inline-block;background:#304236;color:#f6f1e8;text-decoration:none;font-size:15px;padding:14px 28px;border-radius:100px">shop the box</a>
+    <a href="https://buynormie.com/#order" style="display:inline-block;background:#304236;color:#f6f1e8;text-decoration:none;font-size:15px;padding:14px 28px;border-radius:100px">build your box</a>
     <p style="margin:28px 0 0;font-size:13px;line-height:1.5;color:#7d877e">Your code is also saved in your normie account. One use per customer.</p>
   </div>
   <p style="max-width:480px;margin:18px auto 0;text-align:center;font-size:12px;color:#7d877e">normie. · a little ritual. all yours. · buynormie.com</p>
@@ -61,7 +61,7 @@ begin
       'to', jsonb_build_array(r.email),
       'subject', 'welcome to normie.',
       'html', html,
-      'text', format(E'welcome to normie.\n\nThanks for joining. Here is %s%% off your first box: 4 matcha, 4 a\u00e7a\u00ed and 4 coffee sticks. Every box you order also earns a rewards stamp, and 5 stamps get you a free box.\n\nYour code: %s\n\nShop the box: https://buynormie.com/#order\n\nYour code is also saved in your normie account. One use per customer.\n\nnormie. a little ritual. all yours. buynormie.com', r.percent_off, r.code),
+      'text', format(E'welcome to normie.\n\nThanks for joining. Here is %s%% off your first box. Build a 6-pack or 12-pack of matcha, a\u00e7a\u00ed and coffee sticks, mixed your way. Every box you order also earns a rewards stamp, and 5 stamps get you a free box.\n\nYour code: %s\n\nBuild your box: https://buynormie.com/#order\n\nYour code is also saved in your normie account. One use per customer.\n\nnormie. a little ritual. all yours. buynormie.com', r.percent_off, r.code),
       'reply_to', 'hello@buynormie.com',
       -- arrive about 30 seconds after the sign-in email so it lands as its own fresh message
       'scheduled_at', to_char((now() + interval '30 seconds') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')),

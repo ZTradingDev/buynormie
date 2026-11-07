@@ -301,3 +301,30 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
 @media(max-width:374px){.header-inner .account-pill:not(.signed-in) svg{display:none}}
 @media(max-width:389px){.header-inner .account-pill:not(.signed-in) svg{display:none}.header-inner .account-pill{left:calc(max(16px, env(safe-area-inset-left, 0px)) + 40px)}}
 @media(max-width:340px){.header-inner>.wordmark{font-size:21px}}
+
+/* ---------- pack picker + mix builder ---------- */
+.order-sub{margin:0;color:var(--muted);max-width:44ch;text-align:center}
+.pack-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:560px;margin:0 auto 22px}
+.pack-picker button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:16px 18px;border:1.5px solid var(--line);border-radius:18px;background:var(--paper);text-align:left;transition:border-color var(--fast),background var(--fast),transform 120ms}
+.pack-picker button:hover{border-color:var(--ink)}
+.pack-picker button:active{transform:scale(.98)}
+.pack-picker button[aria-checked="true"]{border-color:var(--ink);background:var(--ink);color:var(--cream)}
+.pack-name{font-size:24px;letter-spacing:-.04em;line-height:1.1}
+.pack-meta{font-size:13px;opacity:.75}
+.pack-price{font-size:14px;margin-top:6px;font-weight:700}
+.mix-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;margin:0 0 16px}
+.mix-bar p{margin:0;font-size:15px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.mix-bar p.full{color:var(--ink);font-weight:700}
+.mix-even{font-size:14px;text-decoration:underline;text-underline-offset:3px;color:var(--ink);padding:6px 0}
+.tile-body{grid-template-columns:1fr auto;grid-template-areas:"name step";align-items:center}
+.tile .stepper{grid-area:step}
+.tile .stepper button:disabled{opacity:.3;cursor:not-allowed}
+.order-checkout.is-empty{opacity:.45}
+@media(max-width:600px){
+ .pack-picker{gap:8px}
+ .pack-picker button{padding:14px}
+ .pack-name{font-size:20px}
+ .tile-media{aspect-ratio:16/9}
+ .tile-body{padding:16px 16px 18px}
+ .tile .order-name{font-size:24px}
+}

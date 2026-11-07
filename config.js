@@ -17,7 +17,11 @@ export const brand = {
   demoMode: true,
   website: 'https://buynormie.com',
   // Price shown on the site (number, e.g. 24). The amount charged comes from the Stripe price, not this.
-  boxPrice: null,
+  // Prices shown on the site (numbers, e.g. 15 and 28). The amount charged comes from the payment processor.
+  // Turn on once the payment processor and create-checkout function are live.
+  checkoutLive: false,
+  pack6Price: null,
+  pack12Price: null,
   // Boxes needed for a free box. Must match REWARDS_GOAL in the stripe-webhook function.
   rewardsGoal: 5,
   // Supabase project (Settings > API). The publishable (anon) key is public by design; Row Level Security protects the data.
