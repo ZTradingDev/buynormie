@@ -102,5 +102,5 @@ as $$
   from b
   where (select email from me) is not null;
 $$;
-revoke all on function public.my_rewards(integer) from public;
+revoke all on function public.my_rewards(integer) from public, anon;
 grant execute on function public.my_rewards(integer) to authenticated;
