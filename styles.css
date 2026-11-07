@@ -289,3 +289,15 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
  .header-inner{position:relative}
  .header-inner .account-pill{position:absolute;left:calc(max(16px, env(safe-area-inset-left, 0px)) + 46px);top:50%;transform:translateY(-50%)}
 }
+/* mobile: visible "sign in" tab beside the profile icon */
+@media(max-width:800px){
+ .header-inner .account-pill{width:auto;min-height:34px;padding:0 10px 0 8px;gap:4px;border:1px solid var(--line);border-radius:100px;left:calc(max(16px, env(safe-area-inset-left, 0px)) + 42px);background:var(--paper)}
+ .header-inner .account-pill .account-label{position:static;width:auto;height:auto;overflow:visible;clip:auto;font-size:12.5px;font-weight:700;letter-spacing:.01em}
+ .header-inner .account-pill svg{width:16px;height:16px}
+ .header-inner .account-pill.signed-in{width:34px;padding:0;justify-content:center;background:var(--ink);border-color:var(--ink)}
+ .header-inner .account-pill.signed-in .account-label{display:none}
+ .header-inner>.wordmark{font-size:32px}
+}
+@media(max-width:374px){.header-inner .account-pill:not(.signed-in) svg{display:none}}
+@media(max-width:389px){.header-inner .account-pill:not(.signed-in) svg{display:none}.header-inner .account-pill{left:calc(max(16px, env(safe-area-inset-left, 0px)) + 40px)}}
+@media(max-width:340px){.header-inner>.wordmark{font-size:21px}}
