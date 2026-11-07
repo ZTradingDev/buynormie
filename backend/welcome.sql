@@ -1,5 +1,6 @@
 -- Welcome email with a personal 10% off code, sent once when a customer first signs in
--- (first time their email is confirmed). Emails go out through Resend's API.
+-- (first time their email is confirmed). Emails go out through Resend's API, scheduled 30 seconds
+-- after sign-in, subject "welcome to normie.", with HTML and plain-text versions.
 -- Requires a Vault secret named resend_api_key (a Resend "Sending access" key),
 -- added by the account owner in Supabase > Integrations > Vault. If it's missing, the code
 -- is still created and shown in the customer's account; the email is skipped.
@@ -58,8 +59,12 @@ begin
     body := jsonb_build_object(
       'from', 'normie <hello@buynormie.com>',
       'to', jsonb_build_array(r.email),
-      'subject', format('welcome to normie. here''s %s%% off', r.percent_off),
-      'html', html),
+      'subject', 'welcome to normie.',
+      'html', html,
+      'text', format(E'welcome to normie.\n\nThanks for joining. Here is %s%% off your first box: 4 matcha, 4 a\u00e7a\u00ed and 4 coffee sticks. Every box you order also earns a rewards stamp, and 5 stamps get you a free box.\n\nYour code: %s\n\nShop the box: https://buynormie.com/#order\n\nYour code is also saved in your normie account. One use per customer.\n\nnormie. a little ritual. all yours. buynormie.com', r.percent_off, r.code),
+      'reply_to', 'hello@buynormie.com',
+      -- arrive about 30 seconds after the sign-in email so it lands as its own fresh message
+      'scheduled_at', to_char((now() + interval '30 seconds') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')),
     headers := jsonb_build_object(
       'Authorization', 'Bearer ' || k,
       'Content-Type', 'application/json',
