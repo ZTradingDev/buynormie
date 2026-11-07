@@ -24,7 +24,8 @@ Secrets live only in Supabase Edge Function secrets. The site holds only the pub
    Copy the signing secret (`whsec_...`).
 
 ## 3. Edge Functions (Supabase > Edge Functions)
-- `create-checkout`: code in `backend/functions/create-checkout/index.ts`, Verify JWT ON.
+- `create-checkout`: code in `backend/functions/create-checkout/index.ts`, Verify JWT OFF
+  (guests can check out; the function verifies a signed-in user's token itself).
 - `stripe-webhook`: code in `backend/functions/stripe-webhook/index.ts`, Verify JWT OFF
   (Stripe signs its requests; the function verifies that signature).
 

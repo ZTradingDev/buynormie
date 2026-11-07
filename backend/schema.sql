@@ -6,12 +6,10 @@
 --   * Orders are written only by the stripe-webhook Edge Function using the service role key,
 --     after Stripe's signature is verified.
 
-create extension if not exists citext;
-
 -- ---------- email list ----------
 create table if not exists public.subscribers (
   id          bigint generated always as identity primary key,
-  email       citext not null unique,
+  email       text not null unique check (email = lower(email)),
   source      text not null default 'site',
   created_at  timestamptz not null default now(),
   unsubscribed_at timestamptz,
@@ -45,7 +43,7 @@ create table if not exists public.orders (
   id                 bigint generated always as identity primary key,
   stripe_session_id  text not null unique,
   user_id            uuid references auth.users (id) on delete set null,
-  email              citext not null,
+  email              text not null check (email = lower(email)),
   boxes              integer not null default 1 check (boxes > 0 and boxes <= 50),
   amount_total       integer not null,            -- cents
   currency           text not null default 'usd',
@@ -61,12 +59,12 @@ grant select on public.orders to authenticated;
 drop policy if exists "read own orders" on public.orders;
 create policy "read own orders" on public.orders
   for select to authenticated
-  using (user_id = auth.uid() or email = (auth.jwt() ->> 'email'));
+  using (user_id = auth.uid() or email = lower(auth.jwt() ->> 'email'));
 
 -- ---------- rewards (free-box codes issued by the webhook) ----------
 create table if not exists public.reward_codes (
   id                bigint generated always as identity primary key,
-  email             citext not null,
+  email             text not null check (email = lower(email)),
   code              text not null unique,
   stripe_promo_id   text not null unique,
   redeemed_at       timestamptz,
@@ -79,7 +77,7 @@ grant select on public.reward_codes to authenticated;
 drop policy if exists "read own codes" on public.reward_codes;
 create policy "read own codes" on public.reward_codes
   for select to authenticated
-  using (email = (auth.jwt() ->> 'email'));
+  using (email = lower(auth.jwt() ->> 'email'));
 
 -- Rewards summary for the signed-in customer.
 -- Paid (non-free) boxes earn stamps; every p_goal stamps earns one free box.
@@ -90,7 +88,7 @@ stable
 security definer
 set search_path = public
 as $$
-  with me as (select (auth.jwt() ->> 'email')::citext as email),
+  with me as (select lower(auth.jwt() ->> 'email') as email),
   b as (
     select coalesce(sum(o.boxes) filter (where not o.free_box), 0)::int as paid
     from public.orders o, me where o.email = me.email and o.status = 'paid'

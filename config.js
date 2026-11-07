@@ -20,10 +20,10 @@ export const brand = {
   boxPrice: null,
   // Boxes needed for a free box. Must match REWARDS_GOAL in the stripe-webhook function.
   rewardsGoal: 5,
-  // Supabase project (Settings > API). The anon key is public by design; Row Level Security protects the data.
+  // Supabase project (Settings > API). The publishable (anon) key is public by design; Row Level Security protects the data.
   // Never put the service_role key or any Stripe secret key here.
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://lxqtyfjglgjyjnnptnop.supabase.co',
+  supabaseAnonKey: 'sb_publishable_2sXrVgf-Z_M_tuqj7jiaFA_KZ2oXgec',
 };
 export const motion = {
   fast: 180, ui: 260, panel: 400, close: 240,
