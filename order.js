@@ -85,6 +85,13 @@ async function renderAccount() {
   $('[data-account-email]', dlg).textContent = session.user.email;
   const { n, code } = await renderRewards();
   $('[data-account-stamps]', dlg).textContent = code ? 'Your free box is ready. It’s applied automatically at checkout.' : `${n} of ${GOAL} stamps. ${GOAL - n} more ${GOAL - n === 1 ? 'box' : 'boxes'} to a free box.`;
+  const { data: wc } = await sb.from('welcome_codes').select('code, percent_off, redeemed_at').maybeSingle();
+  const wBlock = $('[data-account-welcome]', dlg);
+  if (wc && !wc.redeemed_at) {
+    $('[data-account-welcome-text]', dlg).textContent = `${wc.percent_off}% off your first box with code`;
+    $('[data-account-code]', dlg).textContent = wc.code;
+    wBlock.hidden = false;
+  } else wBlock.hidden = true;
   const list = $('[data-account-orders]', dlg);
   const { data: orders } = await sb.from('orders').select('created_at, boxes, amount_total, currency, free_box').order('created_at', { ascending: false }).limit(20);
   list.replaceChildren(...(orders?.length ? orders.map(o => {
@@ -147,7 +154,7 @@ if (sb) {
   sb.auth.onAuthStateChange((event, s) => {
     const wasSignedIn = Boolean(session); session = s;
     renderAccount(); renderRewards();
-    if (event === 'SIGNED_IN' && !wasSignedIn) toast(`Signed in as ${s.user.email}.`);
+    if (event === 'SIGNED_IN' && !wasSignedIn) toast(`Signed in as ${s.user.email}. Check your inbox for your welcome code.`);
   });
 } else {
   renderRewards();

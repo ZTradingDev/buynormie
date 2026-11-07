@@ -251,3 +251,4 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
 .site-toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:800px){.account-pill{padding:6px 12px;min-height:34px;font-size:13px}}
 @media(max-width:420px){.account-pill{display:none}}
+.account-code{font-family:inherit;font-weight:700;letter-spacing:.08em;background:var(--sand);border:1px dashed var(--ink);border-radius:8px;padding:2px 8px;user-select:all}
