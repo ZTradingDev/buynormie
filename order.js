@@ -16,42 +16,63 @@ let session = null;
 const validEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 254;
 const money = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: brand.currency || 'USD' }).format(n);
 
-/* ---------- build your box: 6- or 12-pack, mixed per flavor ---------- */
+/* ---------- build your box: the normie special (set), or a 6- / 12-pack mixed per flavor ---------- */
 const FLAVORS = ['matcha', 'acai', 'coffee'];
 const NAMES = { matcha: 'matcha', acai: 'açaí', coffee: 'coffee' };
-const PRICES = { 6: brand.pack6Price, 12: brand.pack12Price };
+const PACKS = {
+  special: { size: 12, label: 'the normie special', price: brand.specialPrice, fixed: { matcha: 4, acai: 4, coffee: 4 } },
+  6: { size: 6, label: '6-pack', price: brand.pack6Price },
+  12: { size: 12, label: '12-pack', price: brand.pack12Price },
+};
 const even = size => { const base = Math.floor(size / 3); const m = { matcha: base, acai: base, coffee: base }; for (let i = 0; i < size - base * 3; i++) m[FLAVORS[i]]++; return m; };
-const box = { size: 12, mix: even(12) };
+const box = { pack: 'special', mix: { ...PACKS.special.fixed } };
 try {
   const saved = JSON.parse(localStorage.getItem('normie-box') || 'null');
-  if (saved && (saved.size === 6 || saved.size === 12) && saved.mix && FLAVORS.reduce((a, k) => a + (saved.mix[k] | 0), 0) <= saved.size) {
-    box.size = saved.size; FLAVORS.forEach(k => { box.mix[k] = Math.max(0, saved.mix[k] | 0); });
+  if (saved && PACKS[saved.pack]) {
+    box.pack = saved.pack;
+    const P = PACKS[box.pack];
+    if (P.fixed) box.mix = { ...P.fixed };
+    else if (saved.mix && FLAVORS.reduce((a, k) => a + (saved.mix[k] | 0), 0) <= P.size) FLAVORS.forEach(k => { box.mix[k] = Math.max(0, saved.mix[k] | 0); });
+    else box.mix = even(P.size);
   }
 } catch (e) {}
+const pack = () => PACKS[box.pack];
+Object.defineProperty(box, 'size', { get: () => pack().size, enumerable: false });
 const picked = () => FLAVORS.reduce((a, k) => a + box.mix[k], 0);
 const mixText = () => FLAVORS.filter(k => box.mix[k] > 0).map(k => `${box.mix[k]} ${NAMES[k]}`).join(', ') || 'no sticks yet';
+const packText = () => `${pack().label} · ${mixText()}`;
 function renderBox() {
-  const n = picked(), left = box.size - n;
-  $$('[data-pack]').forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.pack) === box.size)));
-  $$('[data-pack-price]').forEach(el => { const p = PRICES[el.dataset.packPrice]; el.textContent = typeof p === 'number' ? money(p) : 'price at launch'; });
+  const P = pack(), n = picked(), left = P.size - n, fixed = Boolean(P.fixed);
+  $$('[data-pack]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.pack === box.pack)));
+  $$('[data-pack-price]').forEach(el => { const p = PACKS[el.dataset.packPrice]?.price; el.textContent = typeof p === 'number' ? money(p) : 'price at launch'; });
+  $('#order')?.classList.toggle('is-set', fixed);
   $$('.order-row[data-flavor]').forEach(r => {
     const k = r.dataset.flavor;
     $('[data-qty]', r).textContent = box.mix[k];
-    $('[data-step="-1"]', r).disabled = box.mix[k] === 0;
-    $('[data-step="1"]', r).disabled = left === 0;
+    $('[data-step="-1"]', r).disabled = fixed || box.mix[k] === 0;
+    $('[data-step="1"]', r).disabled = fixed || left === 0;
     r.classList.toggle('in-box', box.mix[k] > 0);
   });
   const prog = $('[data-mix-progress]');
-  if (prog) { prog.textContent = left === 0 ? `${box.size} of ${box.size} sticks picked · your box is full` : `${n} of ${box.size} sticks picked · ${left} to go`; prog.classList.toggle('full', left === 0); }
-  const sum = $('[data-mix-summary]'); if (sum) sum.textContent = `${box.size}-pack · ${mixText()}`;
-  const tot = $('[data-summary-total]'); if (tot) tot.textContent = typeof PRICES[box.size] === 'number' ? money(PRICES[box.size]) : 'price at launch';
+  if (prog) {
+    prog.textContent = fixed ? 'set box · 4 of each flavor · 12 sticks'
+      : left === 0 ? `${P.size} of ${P.size} sticks picked · your box is full` : `${n} of ${P.size} sticks picked · ${left} to go`;
+    prog.classList.toggle('full', left === 0);
+  }
+  const ev = $('[data-mix-even]'); if (ev) ev.hidden = fixed;
+  const sum = $('[data-mix-summary]'); if (sum) sum.textContent = packText();
+  const tot = $('[data-summary-total]'); if (tot) tot.textContent = typeof P.price === 'number' ? money(P.price) : 'price at launch';
   const btn = $('[data-checkout]');
   if (btn) { btn.classList.toggle('is-empty', left !== 0); btn.setAttribute('aria-disabled', String(left !== 0)); }
-  try { localStorage.setItem('normie-box', JSON.stringify(box)); } catch (e) {}
+  try { localStorage.setItem('normie-box', JSON.stringify({ pack: box.pack, mix: box.mix })); } catch (e) {}
 }
-$$('[data-pack]').forEach(b => b.addEventListener('click', () => { const s = Number(b.dataset.pack); if (s === box.size) return; box.size = s; box.mix = even(s); renderBox(); }));
-$('[data-mix-even]')?.addEventListener('click', () => { box.mix = even(box.size); renderBox(); });
+$$('[data-pack]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.pack; if (k === box.pack || !PACKS[k]) return;
+  box.pack = k; box.mix = PACKS[k].fixed ? { ...PACKS[k].fixed } : even(PACKS[k].size); renderBox();
+}));
+$('[data-mix-even]')?.addEventListener('click', () => { if (pack().fixed) return; box.mix = even(box.size); renderBox(); });
 $$('.order-row[data-flavor]').forEach(r => $$('[data-step]', r).forEach(b => b.addEventListener('click', () => {
+  if (pack().fixed) return;
   const k = r.dataset.flavor, d = Number(b.dataset.step);
   if (d > 0 && picked() >= box.size) return;
   box.mix[k] = Math.max(0, box.mix[k] + d); renderBox();
@@ -174,8 +195,8 @@ $('[data-signout]')?.addEventListener('click', async () => { await sb?.auth.sign
 /* ---------- checkout ---------- */
 const checkout = $('[data-checkout]'), orderStatus = $('[data-order-status]');
 checkout?.addEventListener('click', async () => {
-  if (picked() !== box.size) { orderStatus.textContent = `Pick ${box.size - picked()} more ${box.size - picked() === 1 ? 'stick' : 'sticks'} to fill your ${box.size}-pack.`; return; }
-  if (!brand.checkoutLive) { orderStatus.textContent = `Checkout opens at launch. Your ${box.size}-pack (${mixText()}) is saved on this device.`; return; }
+  if (picked() !== box.size) { orderStatus.textContent = `Pick ${box.size - picked()} more ${box.size - picked() === 1 ? 'stick' : 'sticks'} to fill your ${pack().label}.`; return; }
+  if (!brand.checkoutLive) { orderStatus.textContent = `Checkout opens at launch. Saved on this device: ${pack().label} (${mixText()}).`; return; }
   if (!sb) { orderStatus.textContent = 'Checkout isn’t connected yet. Nothing was charged.'; return; }
   checkout.disabled = true; orderStatus.textContent = 'Opening secure checkout…';
   try {
@@ -183,7 +204,7 @@ checkout?.addEventListener('click', async () => {
     const r = await fetch(`${brand.supabaseUrl}/functions/v1/create-checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: brand.supabaseAnonKey, Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ pack: box.size, mix: box.mix }),
+      body: JSON.stringify({ pack: box.pack, mix: box.mix }),
     });
     const out = await r.json().catch(() => ({}));
     if (r.status === 503) { orderStatus.textContent = 'Checkout opens at launch.'; return; }

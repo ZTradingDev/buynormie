@@ -4,6 +4,7 @@
 
 -- Box details stored on each order.
 alter table public.orders add column if not exists pack_size     integer check (pack_size in (6, 12));
+alter table public.orders add column if not exists pack_name     text;       -- 'the normie special', '6-pack', '12-pack'
 alter table public.orders add column if not exists mix           jsonb;      -- {"matcha":4,"acai":4,"coffee":4}
 alter table public.orders add column if not exists customer_name text;
 alter table public.orders add column if not exists shipping      jsonb;      -- {"line1","line2","city","state","postal_code","country"}
@@ -34,7 +35,7 @@ begin
 
   total := case when o.free_box then 'free box (reward)'
                 else '$' || to_char(coalesce(o.amount_total, 0) / 100.0, 'FM999990.00') || ' ' || upper(coalesce(o.currency, 'usd')) end;
-  box := coalesce(o.pack_size::text || '-pack', o.boxes::text || ' box(es)')
+  box := coalesce(nullif(o.pack_name, ''), o.pack_size::text || '-pack', o.boxes::text || ' box(es)')
          || case when o.mix is null then '' else ': '
               || coalesce((o.mix ->> 'matcha')::int, 0) || ' matcha, '
               || coalesce((o.mix ->> 'acai')::int, 0)   || ' açaí, '
@@ -62,7 +63,7 @@ begin
     <p style="margin:20px 0 0;font-size:13px;color:#7d877e">Reply to this email to reach the customer.</p>
   </div>
 </div>$h$,
-    o.id, html_esc(coalesce(o.pack_size::text || '-pack', 'order')), html_esc(box), html_esc(total),
+    o.id, html_esc(coalesce(nullif(o.pack_name, ''), o.pack_size::text || '-pack', 'order')), html_esc(box), html_esc(total),
     html_esc(coalesce(nullif(o.customer_name, ''), '-')), html_esc(o.email), html_esc(addr), html_esc(o.status),
     to_char(o.created_at at time zone 'America/Chicago', 'Mon DD, YYYY HH12:MI AM') || ' CT', html_esc(o.stripe_session_id));
 
@@ -76,7 +77,7 @@ begin
       'from', 'normie orders <orders@buynormie.com>',
       'to', jsonb_build_array(to_addr),
       'reply_to', o.email,
-      'subject', format('new order #%s · %s · %s', o.id, coalesce(o.pack_size::text || '-pack', 'box'), total),
+      'subject', format('new order #%s · %s · %s', o.id, coalesce(nullif(o.pack_name, ''), o.pack_size::text || '-pack', 'box'), total),
       'html', html,
       'text', plain),
     headers := jsonb_build_object(

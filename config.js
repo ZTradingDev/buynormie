@@ -20,6 +20,7 @@ export const brand = {
   // Prices shown on the site (numbers, e.g. 15 and 28). The amount charged comes from the payment processor.
   // Turn on once the payment processor and create-checkout function are live.
   checkoutLive: false,
+  specialPrice: null,   // the normie special: set 12-pack, 4 of each flavor
   pack6Price: null,
   pack12Price: null,
   // Boxes needed for a free box. Must match REWARDS_GOAL in the stripe-webhook function.

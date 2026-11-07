@@ -320,6 +320,11 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
 .tile .stepper{grid-area:step}
 .tile .stepper button:disabled{opacity:.3;cursor:not-allowed}
 .order-checkout.is-empty{opacity:.45}
+.pack-picker .pack-special{grid-column:1/-1;position:relative}
+.pack-badge{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.7;margin-bottom:2px}
+.is-set .tile .stepper button{display:none}
+.is-set .tile .stepper output::before{content:"× "}
+.is-set .tile .stepper{padding:0 4px}
 @media(max-width:600px){
  .pack-picker{gap:8px}
  .pack-picker button{padding:14px}
