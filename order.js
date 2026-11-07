@@ -154,7 +154,7 @@ if (sb) {
   sb.auth.onAuthStateChange((event, s) => {
     const wasSignedIn = Boolean(session); session = s;
     renderAccount(); renderRewards();
-    if (event === 'SIGNED_IN' && !wasSignedIn) toast(`Signed in as ${s.user.email}. Check your inbox for your welcome code.`);
+    if (event === 'SIGNED_IN' && !wasSignedIn) toast(`Signed in as ${s.user.email}.`);
   });
 } else {
   renderRewards();
