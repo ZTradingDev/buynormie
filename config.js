@@ -6,7 +6,7 @@ export const brand = {
   name: 'normie.',
   tagline: 'a little ritual. all yours.',
   description: 'Meet normie: matcha, açaí, and coffee drink sticks in development. Three flavors. One little moment for yourself.',
-  announcement: 'a new everyday ritual. currently in development.',
+  announcement: 'first boxes are coming',
   status: 'prelaunch',
   packCount: 12,
   currency: 'USD',
