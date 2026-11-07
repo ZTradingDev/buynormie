@@ -236,3 +236,18 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
 .rewards-pop-skip{align-self:flex-start;font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:6px 0}
 @media(max-width:700px){.rewards-pop{grid-template-columns:1fr}.rewards-pop-media{aspect-ratio:16/9;min-height:0}.rewards-pop-body{padding:26px 22px 24px}}
 @media(prefers-reduced-motion:reduce){.rewards-pop[open],.rewards-pop.closing{animation:none}}
+.account-pill{display:inline-flex;align-items:center;min-height:40px;padding:8px 16px;border-radius:100px;border:1px solid var(--line);font-size:14px;margin-right:6px;color:var(--ink);background:transparent;transition:border-color var(--fast)}
+.account-pill:hover{border-color:var(--ink)}
+.account-dlg{width:min(560px,calc(100% - 32px));max-height:calc(100% - 32px);padding:0;border:0;border-radius:24px;background:var(--paper);color:var(--ink);overflow:auto;box-shadow:0 40px 90px rgba(30,40,32,.25)}
+.account-dlg[open]{animation:popin 380ms var(--ease)}
+.account-dlg::backdrop{background:rgba(38,48,40,.42);backdrop-filter:blur(4px)}
+.account-body{display:flex;flex-direction:column;gap:14px;padding:44px 32px 30px}
+.account-body h2{font-weight:400;font-size:clamp(32px,4vw,42px);letter-spacing:-.05em;line-height:1}
+.account-email{margin:0;color:var(--muted);overflow-wrap:anywhere}
+.account-block{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.account-block p{margin:0}
+.account-orders{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums}
+.site-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--cream);padding:12px 20px;border-radius:100px;font-size:14px;opacity:0;pointer-events:none;transition:opacity 250ms,transform 250ms var(--ease);z-index:200;max-width:calc(100% - 32px);text-align:center}
+.site-toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:800px){.account-pill{padding:6px 12px;min-height:34px;font-size:13px}}
+@media(max-width:420px){.account-pill{display:none}}

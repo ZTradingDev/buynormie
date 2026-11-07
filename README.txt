@@ -12,12 +12,9 @@ Deploy
   then open http://localhost:8080
 
 Before launch: edit config.js
-- boxPrice:        price of the 12-stick box as a number, e.g. 24
-- checkoutUrl:     hosted checkout link (Shopify, Stripe Payment Link, etc.)
-                   The "order the box" button opens it in a new tab.
-- rewardsGoal:     boxes needed for a free box (currently 5, so the 6th is free)
-- rewardsEndpoint: URL that accepts POST {"email": "..."} for rewards sign-ups
-                   (your loyalty app or email list). Empty = preview mode, nothing is sent.
+- boxPrice:        price shown on the site (the charge itself comes from Stripe)
+- rewardsGoal:     boxes needed for a free box (5)
+- supabaseUrl / supabaseAnonKey: from Supabase Settings > API. See backend/SETUP.md
 - email, waitlistEndpoint, contactEndpoint: contact and waitlist form targets.
 
 Files

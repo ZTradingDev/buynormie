@@ -10,18 +10,20 @@ export const brand = {
   status: 'prelaunch',
   packCount: 12,
   currency: 'USD',
-  website: 'https://normieszn.com',
   // Set same-origin endpoints only after a real service and privacy policy are ready.
   waitlistEndpoint: '',
   contactEndpoint: '',
   contactEmail: '',
   demoMode: true,
-  // Ordering: set a price per box (number, e.g. 24) and a hosted checkout link (Shopify, Stripe Payment Link, etc.).
+  website: 'https://buynormie.com',
+  // Price shown on the site (number, e.g. 24). The amount charged comes from the Stripe price, not this.
   boxPrice: null,
-  checkoutUrl: '',
-  // Rewards: boxes needed for a free box, and a same-origin endpoint or hosted loyalty service for sign-ups.
+  // Boxes needed for a free box. Must match REWARDS_GOAL in the stripe-webhook function.
   rewardsGoal: 5,
-  rewardsEndpoint: '',
+  // Supabase project (Settings > API). The anon key is public by design; Row Level Security protects the data.
+  // Never put the service_role key or any Stripe secret key here.
+  supabaseUrl: '',
+  supabaseAnonKey: '',
 };
 export const motion = {
   fast: 180, ui: 260, panel: 400, close: 240,
