@@ -1,7 +1,7 @@
 // Accounts (passwordless email sign-in), email list, rewards and Stripe checkout.
 // Backend: Supabase (auth + database with Row Level Security) and Stripe (via Supabase Edge Functions).
 // Until supabaseUrl and supabaseAnonKey are set in config.js, everything runs in preview mode and sends nothing.
-import { brand } from './config.js?v=20261107c';
+import { brand } from './config.js?v=20261107d';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -18,7 +18,7 @@ const money = n => new Intl.NumberFormat('en-US', { style: 'currency', currency:
 
 /* ---------- build your box: the normie special (set), or a 6- / 12-pack mixed per flavor ---------- */
 const FLAVORS = ['matcha', 'acai', 'coffee'];
-const NAMES = { matcha: 'matcha', acai: 'açaí', coffee: 'coffee' };
+const NAMES = { matcha: 'matcha', acai: 'açaí', coffee: 'tiramisu coffee' };
 const PACKS = {
   special: { size: 12, label: 'the normie special', price: brand.specialPrice, fixed: { matcha: 4, acai: 4, coffee: 4 } },
   6: { size: 6, label: '6-pack', price: brand.pack6Price },

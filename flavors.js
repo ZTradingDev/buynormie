@@ -26,12 +26,12 @@ export const flavors = {
     note: 'All quantities are development targets, not a finished nutrition label. Exact mineral-source weights, sensory ingredients, and final preparation instructions are still being established.'
   },
   coffee: {
-    name: 'coffee', kicker: 'the morning ritual', background: '#e9dfd1', accent: '#b49473',
+    name: 'tiramisu coffee', kicker: 'the morning ritual', background: '#e9dfd1', accent: '#b49473',
     intro: 'Real instant coffee, with a supporting ingredient program being developed around the daily coffee ritual. The full research blend will be compared with simpler versions.',
     ingredients: [
       ['real coffee.', 'Instant coffee', '5 g', 'Coffee is the foundation. A substantial coffee base, with the roast and caffeine level to be confirmed through formulation.'],
-      ['citicoline.', 'Cognizin® citicoline', '250 mg', 'A specified citicoline ingredient selected for our research program. The finished coffee formula has not been clinically tested.'],
-      ['Alpinia galanga.', 'enXtra®', '300 mg', 'A standardized botanical extract under evaluation as part of the coffee blend. Its role will be assessed alongside the other ingredients.'],
+      ['citicoline.', 'Cognizin® citicoline', '250 mg', 'A specified citicoline ingredient selected for our research program. The finished tiramisu coffee formula has not been clinically tested.'],
+      ['Alpinia galanga.', 'enXtra®', '300 mg', 'A standardized botanical extract under evaluation as part of the tiramisu coffee blend. Its role will be assessed alongside the other ingredients.'],
       ['saffron extract.', 'affron®', '28 mg', 'A saffron extract in the full research formula. Final inclusion depends on formulation, safety, and ingredient-use review.']
     ],
     note: 'Contains caffeine. The final caffeine amount and ingredient selection are not yet confirmed. Ingredient studies do not prove the benefits of this combined formula.'

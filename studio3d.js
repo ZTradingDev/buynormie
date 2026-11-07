@@ -9,7 +9,7 @@ const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
 const FLAVORS = {
   matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#aab58b', ink: '#2c3a20', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
   acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#f0cdbf', ink: '#5e302c', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
-  coffee: { name: 'coffee', note: 'coffee first. always.',               pack: '#cfa36d', ink: '#3d2412', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
+  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#cfa36d', ink: '#3d2412', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
 };
 const ORDER = ['matcha', 'acai', 'coffee'];
 
@@ -36,7 +36,9 @@ function labelTexture(f, back = false) {
     g.save(); g.translate(c.width / 2 + 8, 640); g.rotate(-Math.PI / 2);
     g.font = '700 186px DM, Arial, sans-serif'; g.textAlign = 'center';
     g.fillText('normie.', 0, 0); g.restore();
-    g.font = '400 58px DM, Arial, sans-serif'; g.textAlign = 'center';
+    g.textAlign = 'center';
+    let fs = 58; g.font = `400 ${fs}px DM, Arial, sans-serif`;
+    while (fs > 30 && g.measureText(f.name).width > c.width * 0.82) { fs -= 2; g.font = `400 ${fs}px DM, Arial, sans-serif`; }
     g.fillText(f.name, c.width / 2, 1230);
   } else {
     g.font = '700 54px DM, Arial, sans-serif'; g.textAlign = 'center';

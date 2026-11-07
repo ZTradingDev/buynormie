@@ -39,7 +39,7 @@ begin
          || case when o.mix is null then '' else ': '
               || coalesce((o.mix ->> 'matcha')::int, 0) || ' matcha, '
               || coalesce((o.mix ->> 'acai')::int, 0)   || ' açaí, '
-              || coalesce((o.mix ->> 'coffee')::int, 0) || ' coffee' end;
+              || coalesce((o.mix ->> 'coffee')::int, 0) || ' tiramisu coffee' end;
   addr := case when o.shipping is null then 'not provided'
                else concat_ws(', ', nullif(o.shipping ->> 'line1', ''), nullif(o.shipping ->> 'line2', ''),
                               nullif(o.shipping ->> 'city', ''),

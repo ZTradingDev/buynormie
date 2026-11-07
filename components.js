@@ -1,4 +1,4 @@
-import { brand, products, ROOT } from './config.js';
+import { brand, products, ROOT } from './config.js?v=20261107d';
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const arrow = '<span aria-hidden="true" class="arrow">↗</span>';
 export const roll = text => `<span class="roll"><span>${esc(text)}</span><span aria-hidden="true">${esc(text)}</span></span>`;
