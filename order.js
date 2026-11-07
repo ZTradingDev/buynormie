@@ -1,7 +1,7 @@
 // Accounts (passwordless email sign-in), email list, rewards and Stripe checkout.
 // Backend: Supabase (auth + database with Row Level Security) and Stripe (via Supabase Edge Functions).
 // Until supabaseUrl and supabaseAnonKey are set in config.js, everything runs in preview mode and sends nothing.
-import { brand } from './config.js';
+import { brand } from './config.js?v=20261107c';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
