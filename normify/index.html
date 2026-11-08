@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.fal.media https://fal.media https://*.fal.ai; connect-src 'self' https://*.supabase.co; base-uri 'self'; object-src 'none'">
+<title>Normify test</title>
+<style>
+:root{--cream:#f5f2eb;--paper:#fbf9f4;--ink:#304236;--muted:#657064;--line:#d6d9cd}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.5 Helvetica,Arial,sans-serif}
+main{max-width:880px;margin:0 auto;padding:40px 16px}
+h1{font-size:40px;letter-spacing:-.04em;margin:0 0 6px;font-weight:500}
+p{color:var(--muted);margin:0 0 22px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card img{max-width:100%;max-height:520px;border-radius:10px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 18px}
+label.btn,button{display:inline-flex;align-items:center;min-height:46px;padding:0 22px;border-radius:100px;border:0;font:inherit;cursor:pointer;background:var(--ink);color:var(--cream)}
+label.btn{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+#status{font-size:14px;color:var(--muted)}
+@media(max-width:640px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>normify test.</h1>
+<p>Pick a photo of a person or a pet. It is resized here, sent to the normify function, and drawn as a Normie with fal.ai.</p>
+<div class="bar">
+  <label class="btn" for="file">choose a photo</label>
+  <input id="file" type="file" accept="image/*" hidden>
+  <button id="go" type="button" disabled>normify it</button>
+  <span id="status" aria-live="polite"></span>
+</div>
+<div class="row">
+  <div class="card" id="before"><span>your photo</span></div>
+  <div class="card" id="after"><span>your normie</span></div>
+</div>
+</main>
+<script src="./normify.js"></script>
+</body>
+</html>
