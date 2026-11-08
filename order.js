@@ -1,7 +1,7 @@
 // Accounts (passwordless email sign-in), email list, rewards and Stripe checkout.
 // Backend: Supabase (auth + database with Row Level Security) and Stripe (via Supabase Edge Functions).
 // Until supabaseUrl and supabaseAnonKey are set in config.js, everything runs in preview mode and sends nothing.
-import { brand } from './config.js?v=20261107d';
+import { brand } from './config.js?v=20261107e';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -64,6 +64,39 @@ function renderBox() {
   const tot = $('[data-summary-total]'); if (tot) tot.textContent = typeof P.price === 'number' ? money(P.price) : 'price at launch';
   const btn = $('[data-checkout]');
   if (btn) { btn.classList.toggle('is-empty', left !== 0); btn.setAttribute('aria-disabled', String(left !== 0)); }
+  // savings vs. buying the same number of sticks at the 6-pack rate (only once prices are set)
+  const per6 = typeof PACKS[6].price === 'number' ? PACKS[6].price / 6 : null;
+  $$('[data-pack]').forEach(el => {
+    const Q = PACKS[el.dataset.pack]; let tag = $('.pack-save', el);
+    const save = per6 && typeof Q.price === 'number' ? per6 * Q.size - Q.price : 0;
+    if (save > 0.5) { if (!tag) { tag = document.createElement('span'); tag.className = 'pack-save'; el.appendChild(tag); } tag.textContent = `you save ${money(save)}`; }
+    else tag?.remove();
+  });
+  // slot view: one cell per stick
+  const slots = $('[data-box-slots]');
+  if (slots) {
+    const cells = [];
+    FLAVORS.forEach(k => { for (let i = 0; i < box.mix[k]; i++) cells.push(k); });
+    while (cells.length < P.size) cells.push(null);
+    slots.className = `box-slots size-${P.size}`;
+    slots.replaceChildren(...cells.map((k, i) => {
+      const li = document.createElement('li');
+      if (k) {
+        li.className = `slot slot-${k}`;
+        if (fixed) li.innerHTML = `<span class="sr-only">${NAMES[k]}</span>`;
+        else {
+          const b = document.createElement('button'); b.type = 'button'; b.dataset.removeStick = k;
+          b.setAttribute('aria-label', `Remove one ${NAMES[k]} stick`); b.title = `${NAMES[k]} · tap to remove`;
+          li.appendChild(b);
+        }
+      } else { li.className = 'slot slot-empty'; li.innerHTML = '<span class="sr-only">empty</span>'; }
+      return li;
+    }));
+  }
+  // sticky bar
+  const sn = $('[data-sticky-name]'); if (sn) sn.textContent = P.label;
+  const sm = $('[data-sticky-mix]'); if (sm) sm.textContent = left === 0 ? mixText() : `${n} of ${P.size} picked · ${left} to go`;
+  const sp = $('[data-sticky-price]'); if (sp) sp.textContent = typeof P.price === 'number' ? money(P.price) : 'price at launch';
   try { localStorage.setItem('normie-box', JSON.stringify({ pack: box.pack, mix: box.mix })); } catch (e) {}
 }
 $$('[data-pack]').forEach(b => b.addEventListener('click', () => {
@@ -77,7 +110,29 @@ $$('.order-row[data-flavor]').forEach(r => $$('[data-step]', r).forEach(b => b.a
   if (d > 0 && picked() >= box.size) return;
   box.mix[k] = Math.max(0, box.mix[k] + d); renderBox();
 })));
+$('[data-box-slots]')?.addEventListener('click', e => {
+  const t = e.target.closest('[data-remove-stick]'); if (!t || pack().fixed) return;
+  const k = t.dataset.removeStick; if (box.mix[k] > 0) { box.mix[k]--; renderBox(); }
+});
 renderBox();
+
+/* ---------- sticky order bar: shows once past the hero, hides while the order button is on screen ---------- */
+(() => {
+  const bar = $('[data-sticky-order]'), hero = $('.pop-hero'), order = $('#order .order-bar'), btn = $('[data-sticky-btn]');
+  if (!bar || !hero || !order || !('IntersectionObserver' in window)) return;
+  let pastHero = false, orderVisible = false;
+  const sync = () => {
+    const foot = document.querySelector('footer'), nearFoot = foot ? foot.getBoundingClientRect().top < innerHeight * 0.6 : false;
+    const show = pastHero && !orderVisible && !nearFoot && !document.querySelector('dialog[open]');
+    bar.classList.toggle('show', show); bar.setAttribute('aria-hidden', String(!show));
+    btn.tabIndex = show ? 0 : -1;
+  };
+  new IntersectionObserver(([e]) => { pastHero = !e.isIntersecting && e.boundingClientRect.top < 0; sync(); }).observe(hero);
+  new IntersectionObserver(([e]) => { orderVisible = e.isIntersecting; sync(); }, { threshold: 0.3 }).observe(order);
+  btn.addEventListener('click', () => { order.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); });
+  addEventListener('scroll', sync, { passive: true });
+  setInterval(sync, 800);
+})();
 
 /* ---------- toast ---------- */
 function toast(msg) {

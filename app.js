@@ -1,5 +1,5 @@
-import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261107d';
-import { card, esc, image, productInfo, roll } from './components.js?v=20261107d';
+import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261107e';
+import { card, esc, image, productInfo, roll } from './components.js?v=20261107e';
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const html = document.documentElement;
@@ -210,3 +210,13 @@ $$('[data-form]').forEach(form=>{
  try{const url=new URL(endpoint,location.origin);if(url.origin!==location.origin)throw new Error('Only same-origin form endpoints are supported.');const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form))),signal:controller.signal});const payload=await response.json();if(!response.ok||payload.ok!==true)throw new Error('Submission was not confirmed.');status.textContent=kind==='contact'?'Your message was received. Thank you.':'You’re on the list. Thank you.';}catch{status.textContent='We couldn’t send that. Your details are still here — please try again.';status.classList.add('error');}finally{clearTimeout(timeout);delete form.dataset.pending;button.disabled=false;button.innerHTML=label;status.classList.remove('pending');}
  });
 });
+
+/* sticky order bar on flavor pages: links to build your box once the page is scrolled */
+(()=>{const page=document.querySelector('[data-product-page]');if(!page)return;
+const bar=document.createElement('div');bar.className='sticky-order';bar.setAttribute('aria-hidden','true');
+const name=()=>findProduct(page.dataset.productPage).name;
+bar.innerHTML=`<div class="sticky-order-inner"><div class="sticky-order-info"><p class="sticky-order-name"></p><p class="sticky-order-mix">in the normie special, or mix it into a 6- or 12-pack</p></div><a class="pop-btn sticky-order-btn" href="${ROOT}index.html#order" tabindex="-1">build your box</a></div>`;
+document.body.appendChild(bar);const link=bar.querySelector('a'),title=bar.querySelector('.sticky-order-name');
+const foot=document.querySelector('footer');
+const sync=()=>{title.textContent=name();const footTop=foot?foot.getBoundingClientRect().top:Infinity;const show=scrollY>520&&footTop>innerHeight&&!document.querySelector('dialog[open]');bar.classList.toggle('show',show);bar.setAttribute('aria-hidden',String(!show));link.tabIndex=show?0:-1;};
+addEventListener('scroll',sync,{passive:true});addEventListener('resize',sync);setInterval(sync,800);sync();})();
