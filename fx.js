@@ -1,15 +1,6 @@
-// Extra motion for the home page: hero color blobs with pointer parallax, and sticks that fly into the box.
+// Extra motion for the home page: sticks that fly into the box.
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ROOT = new URL('./', import.meta.url).href;
-
-// hero blobs follow the pointer a little
-const hero = document.querySelector('.pop-hero');
-const blobs = hero ? [...hero.querySelectorAll('.hero-blobs span')] : [];
-if (hero && blobs.length && !reduced && matchMedia('(pointer: fine)').matches) {
-  let tx = 0, ty = 0, x = 0, y = 0, raf = 0;
-  const tick = () => { x += (tx - x) * 0.03; y += (ty - y) * 0.03; blobs.forEach((b, i) => { const d = (i + 1) * 18; b.style.translate = `${x * d}px ${y * d}px`; }); raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.001 ? requestAnimationFrame(tick) : 0; };
-  hero.addEventListener('pointermove', e => { const r = hero.getBoundingClientRect(); tx = (e.clientX - r.left) / r.width - 0.5; ty = (e.clientY - r.top) / r.height - 0.5; if (!raf) raf = requestAnimationFrame(tick); });
-}
 
 // a stick flies from the + button into its slot
 if (!reduced) document.addEventListener('click', e => {

@@ -7,53 +7,89 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 const FLAVORS = {
-  matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#aab58b', ink: '#2c3a20', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
-  acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#f0cdbf', ink: '#5e302c', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
-  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#cfa36d', ink: '#3d2412', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
+  matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#afbd90', ink: '#2c3a20', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
+  acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#ecc0c8', ink: '#5e302c', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
+  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#d6b083', ink: '#3d2412', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
 };
 const ORDER = ['matcha', 'acai', 'coffee'];
 
 /* ---------- textures ---------- */
-function labelTexture(f, back = false) {
+const NOTE = { matcha: 'with L-theanine', acai: '+ collagen', coffee: 'with citicoline' };
+const NUM = { matcha: '01', acai: '02', coffee: '03' };
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = s => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) + amt * 255)));
+  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
+}
+function spaced(g, text, x, y, px) { try { g.letterSpacing = `${px}px`; } catch (e) {} g.fillText(text, x, y); try { g.letterSpacing = '0px'; } catch (e) {} }
+function illustration(g, key, cx, cy, ink) {
+  g.save(); g.translate(cx, cy); g.scale(1.45, 1.45); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
+  if (key === 'matcha') {
+    const leaf = (rot, s) => { g.save(); g.rotate(rot); g.scale(s, s);
+      g.beginPath(); g.moveTo(0, 60); g.bezierCurveTo(-48, 20, -40, -50, 0, -78); g.bezierCurveTo(40, -50, 48, 20, 0, 60); g.stroke();
+      g.beginPath(); g.moveTo(0, 70); g.lineTo(0, -60); g.stroke();
+      for (let i = 0; i < 3; i++) { const y = 30 - i * 26; g.beginPath(); g.moveTo(0, y); g.lineTo(-22 + i * 4, y - 20); g.moveTo(0, y); g.lineTo(22 - i * 4, y - 20); g.stroke(); }
+      g.restore(); };
+    g.translate(-26, 0); leaf(-0.38, 0.82); g.translate(52, 6); leaf(0.42, 0.92);
+  } else if (key === 'acai') {
+    [[-30, 10], [12, 18], [-8, -24], [34, -14], [-38, -34], [4, 52]].forEach(([x, y], i) => {
+      g.beginPath(); g.arc(x, y, 21 - (i % 3) * 2, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(x - 6, y - 7, 3.5, 0, Math.PI * 2); g.fill();
+    });
+    g.beginPath(); g.moveTo(-8, -46); g.quadraticCurveTo(-4, -86, 30, -100); g.stroke();
+  } else {
+    const bean = (x, y, rot) => { g.save(); g.translate(x, y); g.rotate(rot);
+      g.beginPath(); g.ellipse(0, 0, 30, 44, 0, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.moveTo(0, -38); g.bezierCurveTo(-14, -12, 14, 12, 0, 38); g.stroke(); g.restore(); };
+    bean(-30, 8, -0.5); bean(32, -10, 0.45);
+  }
+  g.restore();
+}
+function labelTexture(f, back = false, key = 'matcha') {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 1792;
   const g = c.getContext('2d');
-  g.fillStyle = f.pack; g.fillRect(0, 0, c.width, c.height);
-  // soft paper grain
+  // tonal base: lighter at the top, a touch deeper at the bottom
+  const base = g.createLinearGradient(0, 0, 0, c.height);
+  base.addColorStop(0, shade(f.pack, 0.05)); base.addColorStop(0.55, f.pack); base.addColorStop(1, shade(f.pack, -0.06));
+  g.fillStyle = base; g.fillRect(0, 0, c.width, c.height);
+  // fine paper grain
   const img = g.getImageData(0, 0, c.width, c.height);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 10;
-    img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n;
-  }
+  for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - 0.5) * 6; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; }
   g.putImageData(img, 0, 0);
-  // matte sheen
+  // soft-touch sheen
   const sh = g.createLinearGradient(0, 0, c.width, 0);
-  sh.addColorStop(0, 'rgba(0,0,0,0.10)'); sh.addColorStop(0.35, 'rgba(255,255,255,0.10)');
-  sh.addColorStop(0.6, 'rgba(255,255,255,0.02)'); sh.addColorStop(1, 'rgba(0,0,0,0.12)');
+  sh.addColorStop(0, 'rgba(0,0,0,0.08)'); sh.addColorStop(0.3, 'rgba(255,255,255,0.12)');
+  sh.addColorStop(0.62, 'rgba(255,255,255,0.03)'); sh.addColorStop(1, 'rgba(0,0,0,0.10)');
   g.fillStyle = sh; g.fillRect(0, 0, c.width, c.height);
-  g.fillStyle = f.ink; g.textBaseline = 'middle';
+  g.fillStyle = f.ink; g.strokeStyle = f.ink; g.textBaseline = 'middle'; g.textAlign = 'center';
+  // hairline inset frame
+  g.save(); g.globalAlpha = 0.22; g.lineWidth = 2.5;
+  g.beginPath(); g.roundRect(30, 40, c.width - 60, c.height - 80, 26); g.stroke(); g.restore();
   if (!back) {
-    g.save(); g.translate(c.width / 2 + 8, 640); g.rotate(-Math.PI / 2);
-    g.font = '700 186px DM, Arial, sans-serif'; g.textAlign = 'center';
-    g.fillText('normie.', 0, 0); g.restore();
-    g.textAlign = 'center';
-    let fs = 58; g.font = `400 ${fs}px DM, Arial, sans-serif`;
-    while (fs > 30 && g.measureText(f.name).width > c.width * 0.82) { fs -= 2; g.font = `400 ${fs}px DM, Arial, sans-serif`; }
-    g.fillText(f.name, c.width / 2, 1230);
+    g.save(); g.globalAlpha = 0.7; g.font = '700 30px DM, Arial, sans-serif';
+    spaced(g, `NO. ${NUM[key]}`, c.width / 2, 112, 8); g.restore();
+    g.save(); g.translate(c.width / 2 + 10, 640); g.rotate(-Math.PI / 2);
+    g.font = '700 196px DM, Arial, sans-serif'; spaced(g, 'normie.', 0, 0, -4); g.restore();
+    g.save(); g.globalAlpha = 0.45; g.fillRect(c.width / 2 - 50, 1132, 100, 3); g.restore();
+    let fs = 60; g.font = `400 ${fs}px DM, Arial, sans-serif`;
+    while (fs > 30 && g.measureText(f.name).width > c.width * 0.78) { fs -= 2; g.font = `400 ${fs}px DM, Arial, sans-serif`; }
+    spaced(g, f.name, c.width / 2, 1210, -1);
+    g.save(); g.globalAlpha = 0.75; g.font = '400 34px DM, Arial, sans-serif'; g.fillText(NOTE[key], c.width / 2, 1274); g.restore();
+    g.save(); g.globalAlpha = 0.85; illustration(g, key, c.width / 2, 1478, f.ink); g.restore();
+    g.save(); g.globalAlpha = 0.6; g.font = '700 26px DM, Arial, sans-serif'; spaced(g, 'SINGLE SERVING', c.width / 2, 1684, 7); g.restore();
   } else {
-    g.font = '700 54px DM, Arial, sans-serif'; g.textAlign = 'center';
-    g.fillText('normie.', c.width / 2, 240);
-    g.font = '400 28px DM, Arial, sans-serif'; g.globalAlpha = 0.8;
-    ['tear here', '', 'pour into', 'cold water or milk.', 'stir. sip.', 'make it yours.'].forEach((t, i) => g.fillText(t, c.width / 2, 980 + i * 46));
-    g.globalAlpha = 0.6;
-    g.fillText('concept packaging', c.width / 2, 1620);
-    g.fillText('in development', c.width / 2, 1660);
-    // tear line marker
-    g.globalAlpha = 0.5; g.setLineDash([14, 10]); g.lineWidth = 3; g.strokeStyle = f.ink;
-    g.beginPath(); g.moveTo(40, 120); g.lineTo(c.width - 40, 120); g.stroke();
+    g.font = '700 58px DM, Arial, sans-serif'; g.fillText('normie.', c.width / 2, 250);
+    g.save(); g.globalAlpha = 0.5; g.setLineDash([12, 10]); g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(60, 130); g.lineTo(c.width - 60, 130); g.stroke(); g.restore();
+    g.save(); g.globalAlpha = 0.6; g.font = '700 18px DM, Arial, sans-serif'; spaced(g, 'TEAR HERE', c.width / 2, 100, 5); g.restore();
+    g.font = '400 30px DM, Arial, sans-serif'; g.globalAlpha = 0.85;
+    ['tear.', 'pour into cold', 'water or milk.', 'stir. sip.'].forEach((t, i) => g.fillText(t, c.width / 2, 940 + i * 50));
+    g.globalAlpha = 0.6; g.font = '700 20px DM, Arial, sans-serif';
+    spaced(g, 'MAKE IT YOURS', c.width / 2, 1680, 6);
   }
   const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
 
@@ -62,10 +98,10 @@ const W = 0.62, D = 0.16, BODY_H = 2.2, CAP_H = 0.26, SEAL = 0.2;
 function ribTexture(f) {
   const c = document.createElement('canvas'); c.width = 16; c.height = 128;
   const g = c.getContext('2d'); g.fillStyle = f.pack; g.fillRect(0, 0, 16, 128);
-  for (let i = 0; i < 5; i++) {
-    const y = 22 + i * 17;
-    g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(0, y, 16, 4);
-    g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(0, y + 5, 16, 3);
+  for (let i = 0; i < 9; i++) {
+    const y = 16 + i * 11;
+    g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, y, 16, 3);
+    g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(0, y + 3, 16, 2);
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = THREE.RepeatWrapping; t.repeat.set(1 / W, 1 / SEAL); t.offset.set(0.5, 0);
@@ -89,7 +125,7 @@ function pillow(h, taperTop, taperBottom) {
 }
 function sealGeo(serratedTop) {
   const s = new THREE.Shape();
-  const teeth = 14, hw = W / 2, tooth = 0.035;
+  const teeth = 22, hw = W / 2, tooth = 0.026;
   s.moveTo(-hw, 0);
   s.lineTo(hw, 0);
   if (serratedTop) {
@@ -106,16 +142,17 @@ function sealGeo(serratedTop) {
 
 function makePacket(key) {
   const f = FLAVORS[key];
-  const side = new THREE.MeshStandardMaterial({ color: f.pack, roughness: 0.62 });
-  const front = new THREE.MeshStandardMaterial({ map: labelTexture(f), roughness: 0.55 });
-  const back = new THREE.MeshStandardMaterial({ map: labelTexture(f, true), roughness: 0.6 });
+  const soft = { roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.42, sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color('#ffffff') };
+  const side = new THREE.MeshPhysicalMaterial({ color: f.pack, ...soft });
+  const front = new THREE.MeshPhysicalMaterial({ map: labelTexture(f, false, key), ...soft });
+  const back = new THREE.MeshPhysicalMaterial({ map: labelTexture(f, true, key), ...soft });
   const group = new THREE.Group();
   group.userData = { key, front, back };
 
   const body = new THREE.Mesh(pillow(BODY_H, false, true), [side, side, side, side, front, back]);
   body.position.y = 0; body.castShadow = true;
   group.add(body);
-  const sealMat = new THREE.MeshStandardMaterial({ map: ribTexture(f), roughness: 0.5 });
+  const sealMat = new THREE.MeshPhysicalMaterial({ map: ribTexture(f), roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.3 });
   const bottomSeal = new THREE.Mesh(sealGeo(true), sealMat);
   bottomSeal.rotation.z = Math.PI; bottomSeal.position.y = -BODY_H / 2 + 0.02; bottomSeal.castShadow = true;
   group.add(bottomSeal);
@@ -131,7 +168,7 @@ function makePacket(key) {
   cap.userData.home = cap.position.clone();
   group.add(cap);
   // notch hint
-  const notch = new THREE.Mesh(new THREE.BoxGeometry(W * 0.98, 0.008, D * 0.5), new THREE.MeshBasicMaterial({ color: f.ink, transparent: true, opacity: 0.25 }));
+  const notch = new THREE.Mesh(new THREE.BoxGeometry(W * 0.98, 0.008, D * 0.5), new THREE.MeshBasicMaterial({ color: f.ink, transparent: true, opacity: 0.12 }));
   notch.position.y = BODY_H / 2; group.add(notch);
   group.userData.cap = cap; group.userData.notch = notch; group.userData.body = body;
   group.userData.opening = new THREE.Vector3(0, BODY_H / 2, 0);
@@ -203,7 +240,8 @@ function initStudio(root) {
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -4; sun.shadow.camera.right = 4;
   sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4; sun.shadow.radius = 14; sun.shadow.bias = -0.0005;
   scene.add(sun);
-  const rim = new THREE.DirectionalLight('#ffffff', 0.9); rim.position.set(4, 3, -4); scene.add(rim);
+  const rim = new THREE.DirectionalLight('#ffffff', 1.6); rim.position.set(4, 3, -4); scene.add(rim);
+  const fill = new THREE.DirectionalLight('#ffe9d2', 0.7); fill.position.set(5, 2, 5); scene.add(fill);
 
   const world = new THREE.Group(); scene.add(world);
   // stone plinth
@@ -497,11 +535,11 @@ function initStudio(root) {
   applyFlavor();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loop(); });
   // repaint labels once the brand font is ready
-  document.fonts && document.fonts.load('700 200px DM').then(() => {
+  document.fonts && Promise.all(['700 200px DM','400 30px DM'].map(x => document.fonts.load(x))).then(() => {
     packets.forEach(p => {
       const f = FLAVORS[p.userData.key];
-      p.userData.front.map.dispose(); p.userData.front.map = labelTexture(f); p.userData.front.needsUpdate = true;
-      p.userData.back.map.dispose(); p.userData.back.map = labelTexture(f, true); p.userData.back.needsUpdate = true;
+      p.userData.front.map.dispose(); p.userData.front.map = labelTexture(f, false, p.userData.key); p.userData.front.needsUpdate = true;
+      p.userData.back.map.dispose(); p.userData.back.map = labelTexture(f, true, p.userData.key); p.userData.back.needsUpdate = true;
     });
   }).catch(() => {});
   root.classList.add('studio-ready');
