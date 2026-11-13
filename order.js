@@ -1,7 +1,8 @@
 // Accounts (passwordless email sign-in), email list, rewards and Stripe checkout.
 // Backend: Supabase (auth + database with Row Level Security) and Stripe (via Supabase Edge Functions).
 // Until supabaseUrl and supabaseAnonKey are set in config.js, everything runs in preview mode and sends nothing.
-import { brand } from './config.js?v=20261107e';
+import { brand } from './config.js?v=20261112a';
+import { reserveBox, track } from './api.js?v=20261112a';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -45,6 +46,9 @@ function renderBox() {
   const P = pack(), n = picked(), left = P.size - n, fixed = Boolean(P.fixed);
   $$('[data-pack]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.pack === box.pack)));
   $$('[data-pack-price]').forEach(el => { const p = PACKS[el.dataset.packPrice]?.price; el.textContent = typeof p === 'number' ? money(p) : 'price at launch'; });
+  $$('[data-pack-per]').forEach(el => { const Q = PACKS[el.dataset.packPer]; el.textContent = typeof Q?.price === 'number' ? `${money(Q.price / Q.size)} per stick` : ''; });
+  const pers = Object.values(PACKS).filter(Q => typeof Q.price === 'number').map(Q => Q.price / Q.size);
+  $$('[data-price-row]').forEach(r => { r.hidden = !pers.length; const c = $('[data-per-stick]', r); if (c && pers.length) c.textContent = `from ${money(Math.min(...pers))}`; });
   $('#order')?.classList.toggle('is-set', fixed);
   $$('.order-row[data-flavor]').forEach(r => {
     const k = r.dataset.flavor;
@@ -97,6 +101,7 @@ function renderBox() {
   const sn = $('[data-sticky-name]'); if (sn) sn.textContent = P.label;
   const sm = $('[data-sticky-mix]'); if (sm) sm.textContent = left === 0 ? mixText() : `${n} of ${P.size} picked · ${left} to go`;
   const sp = $('[data-sticky-price]'); if (sp) sp.textContent = typeof P.price === 'number' ? money(P.price) : 'price at launch';
+  const rm = $('[data-reserve-mix]'); if (rm) rm.textContent = packText();
   try { localStorage.setItem('normie-box', JSON.stringify({ pack: box.pack, mix: box.mix })); } catch (e) {}
 }
 $$('[data-pack]').forEach(b => b.addEventListener('click', () => {
@@ -129,7 +134,7 @@ renderBox();
   };
   new IntersectionObserver(([e]) => { pastHero = !e.isIntersecting && e.boundingClientRect.top < 0; sync(); }).observe(hero);
   new IntersectionObserver(([e]) => { orderVisible = e.isIntersecting; sync(); }, { threshold: 0.3 }).observe(order);
-  btn.addEventListener('click', () => { order.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); });
+  btn.addEventListener('click', () => { track('cta_reserve_sticky'); order.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); if (picked() === box.size && !brand.checkoutLive) setTimeout(() => document.querySelector('[data-checkout]')?.click(), 450); });
   addEventListener('scroll', sync, { passive: true });
   setInterval(sync, 800);
 })();
@@ -180,6 +185,7 @@ $$('[data-rewards-form]').forEach(form => {
     try {
       await sendLink(email, form.closest('[data-rewards-pop]') ? 'popup' : 'rewards');
       status.textContent = `Check ${email} for a link to finish joining. It signs you in and starts your rewards card.`;
+      track('rewards_join', form.closest('[data-rewards-pop]') ? 'popup' : 'rewards');
       try { sessionStorage.setItem('normie-rewards-pop', 'closed'); } catch (err) {}
     } catch (err) {
       status.textContent = /rate|security/i.test(err?.message || '') ? 'Too many tries. Wait a minute, then try again.' : 'That didn’t go through. Try again in a moment.';
@@ -247,11 +253,20 @@ signinForm?.addEventListener('submit', async e => {
 });
 $('[data-signout]')?.addEventListener('click', async () => { await sb?.auth.signOut(); dlg?.close(); toast('Signed out.'); });
 
-/* ---------- checkout ---------- */
+/* ---------- reserve (prelaunch) or checkout (once checkoutLive) ---------- */
 const checkout = $('[data-checkout]'), orderStatus = $('[data-order-status]');
+const reserveForm = $('[data-reserve-form]');
+function openReserve() {
+  if (!reserveForm) return;
+  reserveForm.hidden = false;
+  $('[data-reserve-mix]', reserveForm).textContent = packText();
+  const input = $('input[type=email]', reserveForm);
+  if (session?.user?.email && !input.value) input.value = session.user.email;
+  input.focus({ preventScroll: true });
+}
 checkout?.addEventListener('click', async () => {
   if (picked() !== box.size) { orderStatus.textContent = `Pick ${box.size - picked()} more ${box.size - picked() === 1 ? 'stick' : 'sticks'} to fill your ${pack().label}.`; return; }
-  if (!brand.checkoutLive) { orderStatus.textContent = `Checkout opens at launch. Saved on this device: ${pack().label} (${mixText()}).`; return; }
+  if (!brand.checkoutLive) { orderStatus.textContent = ''; openReserve(); track('reserve_open', box.pack); return; }
   if (!sb) { orderStatus.textContent = 'Checkout isn’t connected yet. Nothing was charged.'; return; }
   checkout.disabled = true; orderStatus.textContent = 'Opening secure checkout…';
   try {
@@ -268,6 +283,23 @@ checkout?.addEventListener('click', async () => {
   } catch (err) {
     orderStatus.textContent = 'Checkout didn’t open. Try again in a moment.';
   } finally { checkout.disabled = false; }
+});
+reserveForm?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const input = $('input[type=email]', reserveForm), status = $('[data-reserve-status]', reserveForm), btn = $('button[type=submit]', reserveForm);
+  const email = input.value.trim().toLowerCase();
+  if (!validEmail(email)) { input.setAttribute('aria-invalid', 'true'); status.textContent = 'Enter a valid email address, like you@email.com.'; input.focus(); return; }
+  if (picked() !== box.size) { status.textContent = `Pick ${box.size - picked()} more to fill your box first.`; return; }
+  input.removeAttribute('aria-invalid');
+  btn.disabled = true; status.textContent = 'Saving your box…';
+  const mix = { ...box.mix }, what = packText();
+  const r = await reserveBox(email, box.pack, mix, 'box');
+  btn.disabled = false;
+  if (!r.ok) { status.textContent = 'That didn’t go through. Try again in a moment.'; return; }
+  status.textContent = `Reserved: ${what}. We’ll email ${email} first when boxes ship. No payment taken.`;
+  orderStatus.textContent = 'Your box is reserved. Change the mix anytime and save again.';
+  try { localStorage.setItem('normie-reserved', JSON.stringify({ email, pack: box.pack, mix, at: Date.now() })); } catch (err) {}
+  track('box_reserved', `${box.pack}:m${mix.matcha}-a${mix.acai}-c${mix.coffee}`);
 });
 
 /* ---------- return from Stripe ---------- */

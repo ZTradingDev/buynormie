@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /normify/
+Disallow: /backend/
+
+Sitemap: https://buynormie.com/sitemap.xml

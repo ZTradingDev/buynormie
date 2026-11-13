@@ -400,3 +400,112 @@ html[data-reduced-motion=true]{scroll-behavior:auto}html[data-reduced-motion=tru
  .sticky-order-mix{font-size:12px}
  .sticky-order-btn{padding:12px 20px;font-size:14px}
 }
+
+/* ===== 2026-11-12 prelaunch updates ===== */
+.pop-benefit{font-size:clamp(17px,1.4vw,20px);line-height:1.4;max-width:34ch;margin:0;color:var(--ink)}
+.pop-benefit sup,.product-benefit sup{font-size:.6em;margin-left:1px}
+.waitlist-count{display:inline-flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--ink)}
+.waitlist-count[hidden]{display:none}
+.waitlist-count [data-count]{font-weight:700}
+
+/* how it works */
+.how{border-bottom:1px solid var(--line)}
+.how-inner,.compare-inner,.faq-preview-inner{max-width:1480px;margin:auto;padding-block:80px;padding-left:max(16px,var(--gutter));padding-right:max(16px,var(--gutter))}
+.how h2,.compare h2,.faq-preview h2{font-weight:400;font-size:clamp(40px,4.6vw,68px);letter-spacing:-.05em;margin:12px 0 40px}
+.how-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.how-steps li{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:28px;display:flex;flex-direction:column;gap:10px}
+.how-num{width:40px;height:40px;border-radius:50%;background:var(--ink);color:var(--cream);display:grid;place-items:center;font-size:15px;font-weight:700}
+.how-steps h3{font-size:30px;letter-spacing:-.04em;font-weight:400;margin:8px 0 0}
+.how-steps p{margin:0;color:var(--muted);font-size:15px}
+
+/* comparison */
+.compare{background:var(--sand);border-bottom:1px solid var(--line)}
+.compare-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:22px;border:1px solid var(--line);background:var(--paper)}
+.compare-table{width:100%;border-collapse:collapse;min-width:620px;font-size:15px}
+.compare-table th,.compare-table td{padding:18px 20px;text-align:center;border-bottom:1px solid var(--line);vertical-align:middle}
+.compare-table tbody tr:last-child>*{border-bottom:0}
+.compare-table thead th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.compare-table thead th.cmp-normie{color:var(--cream);background:var(--ink);text-transform:none;letter-spacing:-.02em;font-size:20px;font-weight:700}
+.compare-table tbody th{text-align:left;font-weight:400;width:40%}
+.compare-table tbody th small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.compare-table td.cmp-normie{background:rgba(48,66,54,.06);font-weight:700}
+.cmp-yes{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--cream)}
+.cmp-yes svg{width:16px;height:16px}
+.cmp-no{color:var(--muted)}
+.compare-note{margin:18px 0 0;max-width:80ch}
+
+/* FAQ preview */
+.faq-preview{border-top:1px solid var(--line)}
+.faq-preview-inner{display:grid;grid-template-columns:1fr 2fr;gap:clamp(32px,6vw,100px)}
+.faq-preview h2{margin-bottom:20px}
+
+/* box builder */
+.pack-per{display:block;font-size:12px;opacity:.75;min-height:0}
+.pack-per:empty{display:none}
+.reserve-form{flex-basis:100%;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:18px}
+.reserve-form[hidden]{display:none}
+.reserve-form label{font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.reserve-form input{flex:1 1 260px;min-height:54px;border:1px solid var(--line);border-radius:100px;padding:0 22px;background:var(--paper);font:inherit}
+.reserve-mix{margin:0;font-size:15px;font-weight:700}
+.rewards-status a,.form-disclosure a,.reserve-form a{text-decoration:underline;text-underline-offset:3px}
+.rewards-card-offer{margin:-12px 0 0;font-size:13px;color:var(--muted)}
+
+/* product page */
+.product-benefit{font-size:17px;margin:0 0 6px;color:var(--ink)}
+.product-price{font-size:14px;margin:0 0 18px;font-weight:700}
+.product-price.muted{font-weight:400}
+.allergen-box{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 16px;font-size:13px;background:var(--paper)}
+.allergen-box p{margin:0}
+.allergen-box p+p{margin-top:4px}
+.allergen-box.has-allergen{border-color:#93655d;border-width:1.5px}
+.allergen-title{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:700}
+.allergen-caffeine{color:var(--muted)}
+.directions{margin:0;padding-left:20px;display:grid;gap:8px}
+.concept-note{margin:20px 0 6px}
+.fda-note{margin:0;font-size:11px}
+.supp-facts{border:2px solid #111;padding:8px 10px;max-width:440px;background:#fff;color:#111;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.3}
+.supp-facts p{margin:0}
+.sf-title{font-size:30px;font-weight:900;letter-spacing:-.02em;line-height:1;border-bottom:1px solid #111;padding-bottom:4px}
+.sf-serving{padding:4px 0;border-bottom:8px solid #111}
+.supp-facts table{width:100%;border-collapse:collapse}
+.supp-facts th,.supp-facts td{padding:4px 0;border-bottom:1px solid #111;text-align:left;font-weight:400;vertical-align:top}
+.supp-facts thead th{font-size:11px;font-weight:700;border-bottom:4px solid #111;text-align:right}
+.supp-facts td{text-align:right;white-space:nowrap;padding-left:10px;font-weight:700}
+.supp-facts tbody th{font-weight:700}
+.supp-facts tr.sf-split>*{border-top:6px solid #111}
+.sf-foot{font-size:11px;padding-top:4px;border-top:4px solid #111;margin-top:-1px}
+
+/* legal pages + footer */
+.legal-section{margin-bottom:56px;font-size:15px;scroll-margin-top:calc(var(--header) + 20px)}
+.legal-section h2{font-size:32px!important;margin-bottom:18px!important}
+.legal-section ul{padding-left:20px;display:grid;gap:8px}
+.legal .help-nav{position:sticky;top:calc(var(--header) + 20px);align-self:start}
+.footer-legal{display:inline-flex;gap:18px}
+
+/* mobile 3D: static image until tapped */
+.studio-poster{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border:0;background:none;padding:16px;cursor:pointer;z-index:2;color:var(--ink)}
+.studio-poster img{max-width:min(88%,420px);max-height:78%;width:auto;height:auto;object-fit:contain}
+.studio-poster span{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;background:var(--paper);border:1px solid var(--line);border-radius:100px;padding:9px 16px}
+.studio-poster-mode .studio-hint,.studio-poster-mode .studio-fallback-note{display:none}
+.studio-loading .studio-poster span{opacity:.6}
+.studio-loading .studio-poster span::after{content:"…"}
+
+@media(max-width:800px){
+ .how-steps{grid-template-columns:1fr}
+ .faq-preview-inner{grid-template-columns:1fr;gap:12px}
+ .how-inner,.compare-inner,.faq-preview-inner{padding-block:56px}
+ .how h2,.compare h2,.faq-preview h2{margin-bottom:24px}
+ .compare-table th,.compare-table td{padding:14px 12px}
+ .reserve-form .rewards-field{flex-direction:column}
+ .legal .help-nav{position:static}
+}
+.sticky-order-btn{width:auto;white-space:nowrap}
+@media(max-width:800px){
+ .compare-scroll{overflow:hidden}
+ .compare-table{min-width:0;table-layout:fixed;font-size:13px}
+ .compare-table th,.compare-table td{padding:12px 6px}
+ .compare-table tbody th{width:38%;padding-left:12px}
+ .compare-table thead th{font-size:9.5px;letter-spacing:.06em}
+ .compare-table thead th.cmp-normie{font-size:15px}
+ .cmp-yes{width:24px;height:24px}
+}

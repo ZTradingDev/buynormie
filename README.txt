@@ -15,11 +15,13 @@ Before launch: edit config.js
 - boxPrice:        price shown on the site (the charge itself comes from Stripe)
 - rewardsGoal:     boxes needed for a free box (5)
 - supabaseUrl / supabaseAnonKey: from Supabase Settings > API. See backend/SETUP.md
-- email, waitlistEndpoint, contactEndpoint: contact and waitlist form targets.
+- contactEmail, instagram, tiktok, waitlistCounterMin
+- Run backend/migrations/2026-11-12-waitlist-contact-events.sql once in the Supabase SQL editor.
 
 Files
 - index.html            home: hero with 3D sticks, the box, rewards, film, first-visit rewards popup
-- collection/, products/, about/, help/, build-notes/   other pages
+- collection/, products/, about/, help/, privacy/, terms/   other pages
+- api.js                Supabase calls: waitlist, box reservations, contact form, events
 - styles.css            all styles
 - app.js, components.js, flavors.js, config.js   site logic and content
 - studio3d.js           3D drink sticks, card tilt, scroll effects

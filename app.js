@@ -1,5 +1,6 @@
-import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261107e';
-import { card, esc, image, productInfo, roll } from './components.js?v=20261107e';
+import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261112a';
+import { card, esc, image, productInfo, roll } from './components.js?v=20261112a';
+import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261112a';
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const html = document.documentElement;
@@ -135,7 +136,7 @@ function saveFlavor(id){if(!products.some(p=>p.id===id))return;if(saved.includes
 function removeFlavor(id){saved=saved.filter(v=>v!==id);storage.set('normie-shortlist',saved);syncSaveButtons();overlayBody.innerHTML=renderSaved();bindImages(overlayBody);($('[data-remove]',overlayBody)||$('a',overlayBody)||$('[data-close]')).focus();announce(`${findProduct(id).name} removed from your shortlist.`);}
 syncSaveButtons();
 function openQuick(id){quickId=id;const p=findProduct(id);openOverlay('quick',`a closer look.`,`<div class="quick-image" style="background:${p.color}"><img src="${p.image}" alt="${esc(p.gallery[0].alt)}" width="1024" height="1280"><span class="image-error" hidden>Image unavailable</span></div>${productInfo(p,'quick',true).replace('<h1','<h2').replace('</h1>','</h2>')}`);}
-function openMenu(){openOverlay('menu','a little normie.',`<nav class="mobile-menu-links" aria-label="Mobile navigation"><a href="${ROOT}index.html#order">order the box</a><a href="${ROOT}index.html#account" data-account-open>sign in · my account</a><a href="${ROOT}index.html#rewards">rewards</a><a href="${ROOT}collection/index.html">the collection</a><a href="${ROOT}about/index.html">our story</a><a href="${ROOT}help/index.html">good to know</a></nav><p class="eyebrow">find your flavor</p><div class="mobile-menu-flavors">${products.map(p=>`<a href="${p.url}">${image(p)}<span>${p.name} ↗</span></a>`).join('')}</div>`);}
+function openMenu(){openOverlay('menu','a little normie.',`<nav class="mobile-menu-links" aria-label="Mobile navigation"><a href="${ROOT}index.html#order" data-track="cta_reserve_menu">reserve your box</a><a href="${ROOT}index.html#account" data-account-open>sign in · my account</a><a href="${ROOT}index.html#rewards">rewards</a><a href="${ROOT}collection/index.html">the collection</a><a href="${ROOT}about/index.html">our story</a><a href="${ROOT}help/index.html">good to know</a></nav><p class="eyebrow">find your flavor</p><div class="mobile-menu-flavors">${products.map(p=>`<a href="${p.url}">${image(p)}<span>${p.name} ↗</span></a>`).join('')}</div>`);}
 function searchMarkup(list){return list.map(p=>`<a class="search-result" href="${p.url}"><img src="${p.image}" alt="" width="90" height="110"><div><h3>${esc(p.name)}</h3><p>${esc(p.descriptor)}</p></div><span aria-hidden="true">↗</span></a>`).join('');}
 let searchTimer;
 function openSearch(){openOverlay('search','find your normie.',`<label for="search-input" class="sr-only">Search flavors or ingredients</label><input class="search-input" id="search-input" type="search" placeholder="a flavor, an ingredient…" autocomplete="off"><p class="search-help">Try “matcha”, “collagen”, or “tiramisu”.</p><p class="search-status" role="status" aria-live="polite">3 flavors to explore</p><div id="search-results">${searchMarkup(products)}</div>`,'#search-input');}
@@ -199,23 +200,44 @@ $$('.editorial-tabs').forEach(container=>{const tabs=$$('[role=tab]',container);
  tabs.forEach((tab,i)=>{tab.addEventListener('click',()=>selectTab(tab));tab.addEventListener('keydown',e=>{let next;if(e.key==='ArrowRight')next=tabs[(i+1)%tabs.length];if(e.key==='ArrowLeft')next=tabs[(i-1+tabs.length)%tabs.length];if(e.key==='Home')next=tabs[0];if(e.key==='End')next=tabs.at(-1);if(next){e.preventDefault();next.focus();selectTab(next);}});});
 });
 
-// No simulated signup. A live endpoint must explicitly confirm accepted data.
+// Waitlist and contact forms: sent to Supabase (see api.js). Nothing is simulated.
 $$('[data-form]').forEach(form=>{
- const kind=form.dataset.form,endpoint=kind==='contact'?brand.contactEndpoint:brand.waitlistEndpoint;
- const isDemo=brand.demoMode||!endpoint;
- if(!isDemo){$('.form-disclosure',form).textContent='Your information will be sent to normie when you submit.';const button=$('[type=submit]',form);button.setAttribute('aria-label',kind==='contact'?'Send message':'Join the waitlist');if(kind==='contact')button.innerHTML=roll('send message')+' ↗';}
- form.addEventListener('submit',async e=>{e.preventDefault();if(form.dataset.pending)return;const status=$('.form-status',form);status.classList.remove('error');$$('[aria-invalid]',form).forEach(el=>el.removeAttribute('aria-invalid'));const invalid=$$('input,textarea',form).find(el=>!el.checkValidity());if(invalid){invalid.setAttribute('aria-invalid','true');status.textContent=invalid.type==='email'?'Please enter a valid email address.':'Please complete the highlighted field.';status.classList.add('error');invalid.focus();return;}
- if(isDemo){status.textContent='Preview only — no data was sent. The live form is not connected yet.';return;}
- const button=$('[type=submit]',form);const label=button.innerHTML;form.dataset.pending='true';button.disabled=true;button.textContent='sending…';status.textContent='Sending your information…';status.classList.add('pending');const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);
- try{const url=new URL(endpoint,location.origin);if(url.origin!==location.origin)throw new Error('Only same-origin form endpoints are supported.');const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form))),signal:controller.signal});const payload=await response.json();if(!response.ok||payload.ok!==true)throw new Error('Submission was not confirmed.');status.textContent=kind==='contact'?'Your message was received. Thank you.':'You’re on the list. Thank you.';}catch{status.textContent='We couldn’t send that. Your details are still here — please try again.';status.classList.add('error');}finally{clearTimeout(timeout);delete form.dataset.pending;button.disabled=false;button.innerHTML=label;status.classList.remove('pending');}
+ const kind=form.dataset.form,contact=kind==='contact';
+ form.addEventListener('submit',async e=>{e.preventDefault();if(form.dataset.pending)return;const status=$('.form-status',form);status.classList.remove('error');$$('[aria-invalid]',form).forEach(el=>el.removeAttribute('aria-invalid'));
+ const invalid=$$('input,textarea',form).find(el=>!el.checkValidity()||(el.type==='email'&&!validEmail(el.value.trim())));
+ if(invalid){invalid.setAttribute('aria-invalid','true');status.textContent=invalid.type==='email'?'Please enter a valid email address.':'Please complete the highlighted field.';status.classList.add('error');invalid.focus();return;}
+ const data=Object.fromEntries(new FormData(form));const email=String(data.email||'').trim().toLowerCase();
+ const button=$('[type=submit]',form);const label=button.innerHTML;form.dataset.pending='true';button.disabled=true;if(contact)button.textContent='sending…';status.textContent='Sending…';status.classList.add('pending');
+ try{
+  const r=contact?await rpc('send_contact',{p_name:String(data.name||'').trim(),p_email:email,p_message:String(data.message||'').trim()}):await subscribe(email,`waitlist:${document.body.dataset.page||'site'}`);
+  if(!r.ok){if(contact&&r.missing&&brand.contactEmail){status.innerHTML=`Our form is offline right now. Email us at <a href="mailto:${esc(brand.contactEmail)}">${esc(brand.contactEmail)}</a>.`;status.classList.add('error');return;}if(/rate limited/.test(r.data?.message||'')){throw new Error('rate');}throw new Error('failed');}
+  status.textContent=contact?'Message sent. We’ll reply to '+email+'.':'You’re on the list. We’ll email '+email+' when boxes ship.';
+  form.reset();track(contact?'contact_sent':'waitlist_signup',document.body.dataset.page||'');
+ }catch(err){status.textContent=err.message==='rate'?'You’ve sent a few messages already. Try again in an hour.':'That didn’t go through. Your details are still here. Please try again.';status.classList.add('error');}
+ finally{delete form.dataset.pending;button.disabled=false;button.innerHTML=label;status.classList.remove('pending');}
  });
 });
+
+// Click tracking for calls to action: any element with data-track="event_name".
+document.addEventListener('click',e=>{const t=e.target.closest('[data-track]');if(t)track(t.dataset.track,document.body.dataset.page||'');});
+track('page_view',document.body.dataset.page||'');
+
+// Waitlist counter: shown only once the list passes brand.waitlistCounterMin.
+(()=>{const els=$$('[data-waitlist-count]');if(!els.length)return;waitlistCount().then(n=>{if(typeof n!=='number'||n<(brand.waitlistCounterMin||0))return;const shown=n>=1000?`${(Math.floor(n/100)*100).toLocaleString('en-US')}+`:n.toLocaleString('en-US');els.forEach(el=>{$('[data-count]',el).textContent=shown;el.hidden=false;});});})();
+
+// Social links in the footer, once set in config.js.
+(()=>{const links=[['instagram','Instagram'],['tiktok','TikTok']].filter(([k])=>/^https:\/\//.test(brand[k]||''));if(!links.length)return;$$('footer nav[aria-label="Footer navigation"]').forEach(nav=>{links.forEach(([k,label])=>{const a=document.createElement('a');a.className='nav-link';a.href=brand[k];a.target='_blank';a.rel='noopener';a.textContent=label.toLowerCase();a.dataset.track=`social_${k}`;nav.appendChild(a);});});})();
+
+// Videos: load and play only while on screen.
+(()=>{const vids=$$('video[data-lazy-video]');if(!vids.length)return;const reduce=()=>reduced;
+ const io='IntersectionObserver' in window?new IntersectionObserver(entries=>entries.forEach(({target:v,isIntersecting})=>{if(isIntersecting){if(!v.src&&v.dataset.src){v.src=v.dataset.src;}if(!reduce())v.play().catch(()=>{});}else v.pause();}),{rootMargin:'200px'}):null;
+ vids.forEach(v=>io?io.observe(v):(v.src=v.dataset.src));})();
 
 /* sticky order bar on flavor pages: links to build your box once the page is scrolled */
 (()=>{const page=document.querySelector('[data-product-page]');if(!page)return;
 const bar=document.createElement('div');bar.className='sticky-order';bar.setAttribute('aria-hidden','true');
 const name=()=>findProduct(page.dataset.productPage).name;
-bar.innerHTML=`<div class="sticky-order-inner"><div class="sticky-order-info"><p class="sticky-order-name"></p><p class="sticky-order-mix">in the normie special, or mix it into a 6- or 12-pack</p></div><a class="pop-btn sticky-order-btn" href="${ROOT}index.html#order" tabindex="-1">build your box</a></div>`;
+bar.innerHTML=`<div class="sticky-order-inner"><div class="sticky-order-info"><p class="sticky-order-name"></p><p class="sticky-order-mix">in the normie special, or mix it into a 6- or 12-pack</p></div><a class="pop-btn sticky-order-btn" href="${ROOT}index.html#order" tabindex="-1" data-track="cta_reserve_sticky">reserve your box</a></div>`;
 document.body.appendChild(bar);const link=bar.querySelector('a'),title=bar.querySelector('.sticky-order-name');
 const foot=document.querySelector('footer');
 const sync=()=>{title.textContent=name();const footTop=foot?foot.getBoundingClientRect().top:Infinity;const show=scrollY>520&&footTop>innerHeight&&!document.querySelector('dialog[open]');bar.classList.toggle('show',show);bar.setAttribute('aria-hidden',String(!show));link.tabIndex=show?0:-1;};
