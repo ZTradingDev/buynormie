@@ -1,6 +1,6 @@
 // Thin Supabase REST helper for public RPCs (waitlist, box reservation, contact, events).
 // Uses only the public publishable key; Row Level Security and SECURITY DEFINER functions guard the data.
-import { brand } from './config.js?v=20261113a';
+import { brand } from './config.js?v=20261113b';
 
 export const apiLive = Boolean(brand.supabaseUrl && brand.supabaseAnonKey);
 export const validEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 254;
@@ -34,7 +34,9 @@ export const subscribe = (email, source = 'site') => rpc('subscribe', { p_email:
 // encoded in the source field until the 2026-11-12 migration has been run.
 export async function reserveBox(email, pack, mix, source = 'box') {
   const r = await rpc('reserve_box', { p_email: email, p_pack: String(pack), p_mix: mix, p_source: source });
-  if (!r.missing) return r;
+  // an older copy of reserve_box rejects custom mixes for the special; store it the fallback way instead
+  const stale = !r.ok && /invalid mix/.test(r.data?.message || '');
+  if (!r.missing && !stale) return r;
   return subscribe(email, `box:${pack}:m${mix.matcha}-a${mix.acai}-c${mix.coffee}`);
 }
 

@@ -6,7 +6,7 @@ const ROOT = new URL('./', import.meta.url).href;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-import { FLAVORS, ORDER, labelTexture, makePacket, W, D, BODY_H, CAP_H, SEAL } from './packets3d.js?v=20261113a';
+import { FLAVORS, ORDER, labelTexture, makePacket, W, D, BODY_H, CAP_H, SEAL } from './packets3d.js?v=20261113b';
 
 /* ---------- sunlit backdrop (wall + floor with window and branch shadows) ---------- */
 let backdropURL = '';

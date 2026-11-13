@@ -1,6 +1,6 @@
-import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261113a';
-import { card, esc, image, productInfo, roll } from './components.js?v=20261113a';
-import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261113a';
+import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261113b';
+import { card, esc, image, productInfo, roll } from './components.js?v=20261113b';
+import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261113b';
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const html = document.documentElement;
@@ -237,7 +237,7 @@ track('page_view',document.body.dataset.page||'');
 (()=>{const page=document.querySelector('[data-product-page]');if(!page)return;
 const bar=document.createElement('div');bar.className='sticky-order';bar.setAttribute('aria-hidden','true');
 const name=()=>findProduct(page.dataset.productPage).name;
-bar.innerHTML=`<div class="sticky-order-inner"><div class="sticky-order-info"><p class="sticky-order-name"></p><p class="sticky-order-mix">in the normie special, or mix it into a 6- or 12-pack</p></div><a class="pop-btn sticky-order-btn" href="${ROOT}index.html#order" tabindex="-1" data-track="cta_reserve_sticky">reserve your box</a></div>`;
+bar.innerHTML=`<div class="sticky-order-inner"><div class="sticky-order-info"><p class="sticky-order-name"></p><p class="sticky-order-mix">in every 6- and 12-pack, or pick your own mix in the normie special</p></div><a class="pop-btn sticky-order-btn" href="${ROOT}index.html#order" tabindex="-1" data-track="cta_reserve_sticky">reserve your box</a></div>`;
 document.body.appendChild(bar);const link=bar.querySelector('a'),title=bar.querySelector('.sticky-order-name');
 const foot=document.querySelector('footer');
 const sync=()=>{title.textContent=name();const footTop=foot?foot.getBoundingClientRect().top:Infinity;const show=scrollY>520&&footTop>innerHeight&&!document.querySelector('dialog[open]');bar.classList.toggle('show',show);bar.setAttribute('aria-hidden',String(!show));link.tabIndex=show?0:-1;};

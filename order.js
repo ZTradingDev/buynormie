@@ -1,8 +1,8 @@
 // Accounts (passwordless email sign-in), email list, rewards and Stripe checkout.
 // Backend: Supabase (auth + database with Row Level Security) and Stripe (via Supabase Edge Functions).
 // Until supabaseUrl and supabaseAnonKey are set in config.js, everything runs in preview mode and sends nothing.
-import { brand } from './config.js?v=20261113a';
-import { reserveBox, track } from './api.js?v=20261113a';
+import { brand } from './config.js?v=20261113b';
+import { reserveBox, track } from './api.js?v=20261113b';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -17,16 +17,16 @@ let session = null;
 const validEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 254;
 const money = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: brand.currency || 'USD' }).format(n);
 
-/* ---------- build your box: the normie special (set), or a 6- / 12-pack mixed per flavor ---------- */
+/* ---------- build your box: a set 6-pack (2 of each) or 12-pack (4 of each), or the normie special mixed per flavor ---------- */
 const FLAVORS = ['matcha', 'acai', 'coffee'];
 const NAMES = { matcha: 'matcha', acai: 'açaí', coffee: 'tiramisu coffee' };
 const PACKS = {
-  special: { size: 12, label: 'the normie special', price: brand.specialPrice, fixed: { matcha: 4, acai: 4, coffee: 4 } },
-  6: { size: 6, label: '6-pack', price: brand.pack6Price },
-  12: { size: 12, label: '12-pack', price: brand.pack12Price },
+  special: { size: 12, label: 'the normie special', price: brand.specialPrice },
+  6: { size: 6, label: '6-pack', price: brand.pack6Price, fixed: { matcha: 2, acai: 2, coffee: 2 } },
+  12: { size: 12, label: '12-pack', price: brand.pack12Price, fixed: { matcha: 4, acai: 4, coffee: 4 } },
 };
 const even = size => { const base = Math.floor(size / 3); const m = { matcha: base, acai: base, coffee: base }; for (let i = 0; i < size - base * 3; i++) m[FLAVORS[i]]++; return m; };
-const box = { pack: 'special', mix: { ...PACKS.special.fixed } };
+const box = { pack: 'special', mix: even(12) };
 try {
   const saved = JSON.parse(localStorage.getItem('normie-box') || 'null');
   if (saved && PACKS[saved.pack]) {
@@ -59,7 +59,7 @@ function renderBox() {
   });
   const prog = $('[data-mix-progress]');
   if (prog) {
-    prog.textContent = fixed ? 'set box · 4 of each flavor · 12 sticks'
+    prog.textContent = fixed ? `set box · ${P.size / 3} of each flavor · ${P.size} sticks`
       : left === 0 ? `${P.size} of ${P.size} sticks picked · your box is full` : `${n} of ${P.size} sticks picked · ${left} to go`;
     prog.classList.toggle('full', left === 0);
   }

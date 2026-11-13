@@ -9,7 +9,7 @@ alter table public.subscribers add column if not exists box_mix     jsonb;
 alter table public.subscribers add column if not exists reserved_at timestamptz;
 
 -- Save an email plus the box the visitor built. Never reveals whether the email already existed.
--- p_pack: 'special' | '6' | '12'. p_mix: {"matcha":n,"acai":n,"coffee":n}, must add up to the pack size.
+-- p_pack: 'special' | '6' | '12'. p_mix: {"matcha":n,"acai":n,"coffee":n}, must add up to the pack size. '6' and '12' are even splits; 'special' is any mix of 12.
 create or replace function public.reserve_box(p_email text, p_pack text, p_mix jsonb, p_source text default 'box')
 returns void
 language plpgsql
@@ -32,7 +32,8 @@ begin
   if least(v_m, v_a, v_c) < 0 or v_m + v_a + v_c <> v_size then
     raise exception 'invalid mix' using errcode = '22023';
   end if;
-  if p_pack = 'special' and (v_m, v_a, v_c) <> (4, 4, 4) then
+  -- the 6-pack and 12-pack are set boxes (even split); the normie special is any mix of 12
+  if p_pack in ('6', '12') and (v_m <> v_size / 3 or v_a <> v_size / 3 or v_c <> v_size / 3) then
     raise exception 'invalid mix' using errcode = '22023';
   end if;
   insert into public.subscribers (email, source, box_pack, box_mix, reserved_at)

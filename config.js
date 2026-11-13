@@ -1,4 +1,4 @@
-import { flavors } from './flavors.js?v=20261113a';
+import { flavors } from './flavors.js?v=20261113b';
 export const ROOT = new URL('./', import.meta.url).href;
 
 // Edit brand, products, integrations, and motion here. Rebuild HTML with npm run build.
