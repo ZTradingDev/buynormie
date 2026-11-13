@@ -4,7 +4,6 @@
 // Every frame is a pure function of scroll progress, so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
 import { FLAVORS, makePacket, BODY_H } from './packets3d.js';
-import { makePouch, PH } from './pouch3d.js';
 import { RoomEnvironment } from './vendor/three-addons/environments/RoomEnvironment.js';
 import { track } from './api.js?v=20261112a';
 
@@ -25,7 +24,7 @@ function boot(section) {
   const mobile = innerWidth < 800;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.2;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.02;
 
   try { if (localStorage.getItem('normie-intro-seen')) section.classList.add('intro-short'); } catch (e) {}
 
@@ -41,7 +40,7 @@ function boot(section) {
   const BG = { base: col('#efe8dc'), matcha: col('#e3e8d6'), acai: col('#f1e4e1'), coffee: col('#ecdfcd'), end: col('#efe6d6') };
   const bg = BG.base.clone(); scene.background = bg;
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer), 0.04).texture;
-  scene.add(new THREE.HemisphereLight('#fff7ea', '#d9c9ad', 1.1));
+  scene.add(new THREE.HemisphereLight('#fff7ea', '#d9c9ad', .85));
   const sun = new THREE.DirectionalLight('#fff4e2', 1.5); sun.position.set(-3, 7, 4); scene.add(sun);
 
   // soft contact shadow under whatever is on stage
@@ -51,13 +50,21 @@ function boot(section) {
 
   /* ---------- the three pouches ---------- */
   const keys = ['matcha', 'acai', 'coffee'];
-  const pouches = keys.map(k => { const p = makePouch(k); scene.add(p); return p; });
+  // the pouches are the real packaging photos, placed on flat cards
+  const ROOT = new URL('./', import.meta.url).href;
+  const PH = 2.9, PWIDE = PH * 876 / 1280;
+  const loader = new THREE.TextureLoader();
+  const pouches = keys.map(k => {
+    const tex = loader.load(`${ROOT}assets/pouch-${k}.webp`); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(PWIDE, PH), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, depthWrite: false }));
+    p.renderOrder = 1; scene.add(p); return p;
+  });
   const FLOOR = -1.5;                       // pouch base height
   const pouchY = FLOOR + PH / 2;
 
   /* ---------- one stick per flavor ---------- */
   const sticks = keys.map(k => { const m = makePacket(k); scene.add(m); return m; });
-  const STICK_IN = 0.52;                    // size while still inside the pouch
+  const STICK_IN = 0.58;                    // size while still inside the pouch
 
   /* ---------- layout ---------- */
   let W = 0, H = 0, portrait = false;
@@ -66,9 +73,9 @@ function boot(section) {
     renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); portrait = W < H;
   }
   addEventListener('resize', resize);
-  const gap = () => portrait ? 1.45 : 2.5;
+  const gap = () => portrait ? 1.5 : 2.6;
   // the same arrangement as the hero's 3D model (studio3d.js rest pose)
-  const heroPos = i => new THREE.Vector3((i - 1) * (portrait ? 0.95 : 1.3), 0.35, 0);
+  const heroPos = i => new THREE.Vector3((i - 1) * (portrait ? 0.95 : 1.3), -0.3, 0);
   const heroRotY = i => (i - 1) * -0.12, heroRotZ = i => (1 - i) * 0.06;
 
   /* ---------- overlay ---------- */
@@ -114,19 +121,19 @@ function boot(section) {
       const o = i - 1;
       pp.visible = P > .08 && leave < 1;
       pp.position.set(o * gap(), pouchY + (1 - enter) * -7 + leave * -8, portrait && o === 0 ? .5 : 0);
-      pp.rotation.set(0, o * -.12 + (1 - enter) * .35 + turn * -.5, 0);
+      pp.rotation.set(0, o * -.06 + (1 - enter) * .12 + turn * -.1, 0);
     });
 
     // sticks
     sticks.forEach((m, i) => {
       const o = i - 1, [k, s, e] = FOCUS[i];
-      m.visible = rise > 0;
+      m.visible = rise > 0; m.renderOrder = 2;
       // start: front-row slot inside its pouch
-      a.set(o * gap() + .2, FLOOR + .04 + 1.32 * STICK_IN, .13);
+      a.set(o * gap() + PWIDE * .085, pouchY - PH * .1, .12);
       // lifted: floating above where the pouch stood
-      b.set(o * (portrait ? 1.0 : 1.9), .55, 0);
+      b.set(o * (portrait ? 1.0 : 1.9), -.05, 0);
       v.copy(a).lerp(b, rise);
-      let scale = lerp(STICK_IN, .86, rise), ry = lerp(-.5 + o * -.12, o * -.1, rise), rz = 0;
+      let scale = lerp(STICK_IN, .86, rise), ry = lerp(o * -.06 - .1, o * -.1, rise), rz = 0;
       // focus: the named flavor eases forward, the others ease back
       const w = ease(Math.sin(seg(P, s, e) * Math.PI));
       const any = FOCUS.reduce((mx, [, s2, e2]) => Math.max(mx, ease(Math.sin(seg(P, s2, e2) * Math.PI))), 0);
@@ -148,7 +155,7 @@ function boot(section) {
     // shadow follows the group on stage
     const onStage = enter * (1 - leave);
     shadow.position.set(0, FLOOR - .01, 0); shadow.scale.set(gap() * 3.8, 3.4, 1);
-    shadow.material.opacity = onStage * .32;
+    shadow.material.opacity = onStage * .18;
 
     // overlay
     const ready = section.classList.contains('intro-ready') ? 1 : 0;

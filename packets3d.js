@@ -2,9 +2,9 @@
 import * as THREE from './vendor/three.module.js';
 
 export const FLAVORS = {
-  matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#bccaa0', ink: '#3f5a2e', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
-  acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#ecbcc1', ink: '#8c4a57', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
-  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#dfc29e', ink: '#6e4628', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
+  matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#b3c485', ink: '#3a4a26', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
+  acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#e6a5a4', ink: '#8a3f42', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
+  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#dcb185', ink: '#6a3d1a', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
 };
 export const ORDER = ['matcha', 'acai', 'coffee'];
 
@@ -68,41 +68,36 @@ export function labelTexture(f, back = false, key = 'matcha') {
     g.globalAlpha = 0.75; g.font = '400 34px DM, Arial, sans-serif';
     g.fillText('single', c.width / 2, 1390); g.fillText('serving', c.width / 2, 1432); g.globalAlpha = 1;
   } else {
-    g.font = '700 58px DM, Arial, sans-serif'; g.fillText('normie.', c.width / 2, 250);
-    g.save(); g.globalAlpha = 0.5; g.setLineDash([12, 10]); g.lineWidth = 2.5;
-    g.beginPath(); g.moveTo(60, 130); g.lineTo(c.width - 60, 130); g.stroke(); g.restore();
-    g.save(); g.globalAlpha = 0.6; g.font = '700 18px DM, Arial, sans-serif'; spaced(g, 'TEAR HERE', c.width / 2, 100, 5); g.restore();
-    g.font = '400 30px DM, Arial, sans-serif'; g.globalAlpha = 0.85;
-    ['tear.', 'pour into cold', 'water or milk.', 'stir. sip.'].forEach((t, i) => g.fillText(t, c.width / 2, 940 + i * 50));
-    g.globalAlpha = 0.6; g.font = '700 20px DM, Arial, sans-serif';
-    spaced(g, 'MAKE IT YOURS', c.width / 2, 1680, 6);
+    const seam = g.createLinearGradient(c.width / 2 - 26, 0, c.width / 2 + 26, 0);
+    seam.addColorStop(0, 'rgba(0,0,0,0)'); seam.addColorStop(.42, 'rgba(0,0,0,.10)'); seam.addColorStop(.5, 'rgba(255,255,255,.28)'); seam.addColorStop(.58, 'rgba(0,0,0,.08)'); seam.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = seam; g.fillRect(c.width / 2 - 26, 0, 52, c.height);
   }
+  // film puckers where the pouch meets each end seal
+  g.save(); g.lineCap = 'round';
+  [[0, 1], [c.height, -1]].forEach(([y0, dir]) => {
+    for (let i = 0; i < 9; i++) {
+      const x = 40 + (i / 8) * (c.width - 80) + (Math.random() - .5) * 24, len = 90 + Math.random() * 120;
+      const gr = g.createLinearGradient(0, y0, 0, y0 + dir * len);
+      gr.addColorStop(0, i % 2 ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.strokeStyle = gr; g.lineWidth = 10 + Math.random() * 14;
+      g.beginPath(); g.moveTo(x, y0); g.quadraticCurveTo(x + (x - c.width / 2) * -.08, y0 + dir * len * .5, x + (x - c.width / 2) * -.14, y0 + dir * len); g.stroke();
+    }
+  });
+  g.restore();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
 
 /* ---------- geometry ---------- */
-export const W = 0.62, D = 0.16, BODY_H = 2.2, CAP_H = 0.26, SEAL = 0.2;
-function ribTexture(f) {
-  const c = document.createElement('canvas'); c.width = 16; c.height = 128;
-  const g = c.getContext('2d'); g.fillStyle = f.pack; g.fillRect(0, 0, 16, 128);
-  for (let i = 0; i < 9; i++) {
-    const y = 16 + i * 11;
-    g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, y, 16, 3);
-    g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(0, y + 3, 16, 2);
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = THREE.RepeatWrapping; t.repeat.set(1 / W, 1 / SEAL); t.offset.set(0.5, 0);
-  return t;
-}
+export const W = 0.62, D = 0.2, BODY_H = 2.2, CAP_H = 0.26, SEAL = 0.2;
 function pillow(h, taperTop, taperBottom) {
   const geo = new THREE.BoxGeometry(W, h, D, 18, 48, 2);
   const p = geo.attributes.position;
   const hw = W / 2, hh = h / 2;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const fx = Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(x) / hw, 6)));
+    const fx = Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(x) / hw, 3.2)));
     let fy = 1;
     if (taperTop && y > hh - 0.22) fy = Math.max(0.06, (hh - y) / 0.22);
     if (taperBottom && y < -hh + 0.22) fy = Math.max(0.06, (y + hh) / 0.22);
@@ -112,20 +107,16 @@ function pillow(h, taperTop, taperBottom) {
   geo.computeVertexNormals();
   return geo;
 }
-function sealGeo(serratedTop) {
-  const s = new THREE.Shape();
-  const teeth = 22, hw = W / 2, tooth = 0.026;
-  s.moveTo(-hw, 0);
-  s.lineTo(hw, 0);
-  if (serratedTop) {
-    for (let i = teeth; i >= 0; i--) {
-      const x = -hw + (i / teeth) * W;
-      s.lineTo(x, SEAL - (i % 2 ? tooth : 0));
-    }
-  } else s.lineTo(hw, SEAL), s.lineTo(-hw, SEAL);
-  s.lineTo(-hw, 0);
-  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.014, bevelEnabled: false });
-  geo.translate(0, 0, -0.007);
+function sealGeo() {
+  const geo = new THREE.BoxGeometry(W, SEAL, 0.02, 1, 60, 1);
+  geo.translate(0, SEAL / 2, 0);
+  const p = geo.attributes.position, RIBS = 5;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i) / SEAL, z = p.getZ(i);
+    const rib = Math.pow(Math.max(0, Math.sin(y * Math.PI * 2 * RIBS - Math.PI / 2) * .5 + .5), 1.6);
+    p.setZ(i, Math.sign(z) * (0.006 + rib * 0.016));
+  }
+  geo.computeVertexNormals();
   return geo;
 }
 
@@ -133,7 +124,7 @@ const MATS = {};
 function mats(key) {
   if (MATS[key]) return MATS[key];
   const f = FLAVORS[key];
-  const soft = { roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.4, sheen: 0.3, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff'), envMapIntensity: 0.3 };
+  const soft = { roughness: 0.4, clearcoat: 0.22, clearcoatRoughness: 0.45, sheen: 0.4, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff'), envMapIntensity: 0.3 };
   return (MATS[key] = {
     side: new THREE.MeshPhysicalMaterial({ color: f.pack, ...soft }),
     front: new THREE.MeshPhysicalMaterial({ map: labelTexture(f, false, key), ...soft }),
@@ -149,8 +140,8 @@ export function makePacket(key) {
   const body = new THREE.Mesh(pillow(BODY_H, false, true), [side, side, side, side, front, back]);
   body.position.y = 0; body.castShadow = true;
   group.add(body);
-  const sealMat = new THREE.MeshPhysicalMaterial({ map: ribTexture(f), roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.3 });
-  const bottomSeal = new THREE.Mesh(sealGeo(true), sealMat);
+  const sealMat = side;
+  const bottomSeal = new THREE.Mesh(sealGeo(), sealMat);
   bottomSeal.rotation.z = Math.PI; bottomSeal.position.y = -BODY_H / 2 + 0.02; bottomSeal.castShadow = true;
   group.add(bottomSeal);
 
@@ -158,14 +149,14 @@ export function makePacket(key) {
   const cap = new THREE.Group();
   const capBody = new THREE.Mesh(pillow(CAP_H, true, false), side);
   capBody.position.y = CAP_H / 2; capBody.castShadow = true;
-  const topSeal = new THREE.Mesh(sealGeo(true), sealMat.clone());
+  const topSeal = new THREE.Mesh(sealGeo(), sealMat);
   topSeal.position.y = CAP_H - 0.02; topSeal.castShadow = true;
   cap.add(capBody, topSeal);
   cap.position.y = BODY_H / 2 + 0.004;
   cap.userData.home = cap.position.clone();
   group.add(cap);
   // notch hint
-  const notch = new THREE.Mesh(new THREE.BoxGeometry(W * 0.98, 0.008, D * 0.5), new THREE.MeshBasicMaterial({ color: f.ink, transparent: true, opacity: 0.12 }));
+  const notch = new THREE.Mesh(new THREE.BoxGeometry(W * 0.98, 0.008, D * 0.5), new THREE.MeshBasicMaterial({ color: f.ink, transparent: true, opacity: 0.0 }));
   notch.position.y = BODY_H / 2; group.add(notch);
   group.userData.cap = cap; group.userData.notch = notch; group.userData.body = body;
   group.userData.opening = new THREE.Vector3(0, BODY_H / 2, 0);
