@@ -2,9 +2,9 @@
 import * as THREE from './vendor/three.module.js';
 
 export const FLAVORS = {
-  matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#afbd90', ink: '#2c3a20', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
-  acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#ecc0c8', ink: '#5e302c', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
-  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#d6b083', ink: '#3d2412', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
+  matcha: { name: 'matcha', note: 'earthy. green. unmistakably matcha.', pack: '#bccaa0', ink: '#3f5a2e', stage: '#e9dfcc', powder: '#86a35a', drink: '#9dbb72', drinkTop: '#c9d9a8' },
+  acai:   { name: 'açaí',   note: 'berry-forward. a little different.',   pack: '#ecbcc1', ink: '#8c4a57', stage: '#ecdccc', powder: '#6e2d4a', drink: '#5b2340', drinkTop: '#8a4766' },
+  coffee: { name: 'tiramisu coffee', note: 'coffee first. always.',               pack: '#dfc29e', ink: '#6e4628', stage: '#eadbc6', powder: '#5c3f2a', drink: '#a57a55', drinkTop: '#d9bf9f' },
 };
 export const ORDER = ['matcha', 'acai', 'coffee'];
 
@@ -46,7 +46,7 @@ export function labelTexture(f, back = false, key = 'matcha') {
   const g = c.getContext('2d');
   // tonal base: lighter at the top, a touch deeper at the bottom
   const base = g.createLinearGradient(0, 0, 0, c.height);
-  base.addColorStop(0, shade(f.pack, 0.05)); base.addColorStop(0.55, f.pack); base.addColorStop(1, shade(f.pack, -0.06));
+  base.addColorStop(0, shade(f.pack, 0.015)); base.addColorStop(1, shade(f.pack, -0.015));
   g.fillStyle = base; g.fillRect(0, 0, c.width, c.height);
   // fine paper grain
   const img = g.getImageData(0, 0, c.width, c.height);
@@ -59,20 +59,14 @@ export function labelTexture(f, back = false, key = 'matcha') {
   g.fillStyle = sh; g.fillRect(0, 0, c.width, c.height);
   g.fillStyle = f.ink; g.strokeStyle = f.ink; g.textBaseline = 'middle'; g.textAlign = 'center';
   // hairline inset frame
-  g.save(); g.globalAlpha = 0.22; g.lineWidth = 2.5;
-  g.beginPath(); g.roundRect(30, 40, c.width - 60, c.height - 80, 26); g.stroke(); g.restore();
   if (!back) {
-    g.save(); g.globalAlpha = 0.7; g.font = '700 30px DM, Arial, sans-serif';
-    spaced(g, `NO. ${NUM[key]}`, c.width / 2, 112, 8); g.restore();
-    g.save(); g.translate(c.width / 2 + 10, 640); g.rotate(-Math.PI / 2);
-    g.font = '700 196px DM, Arial, sans-serif'; spaced(g, 'normie.', 0, 0, -4); g.restore();
-    g.save(); g.globalAlpha = 0.45; g.fillRect(c.width / 2 - 50, 1132, 100, 3); g.restore();
-    let fs = 60; g.font = `400 ${fs}px DM, Arial, sans-serif`;
-    while (fs > 30 && g.measureText(f.name).width > c.width * 0.78) { fs -= 2; g.font = `400 ${fs}px DM, Arial, sans-serif`; }
-    spaced(g, f.name, c.width / 2, 1210, -1);
-    g.save(); g.globalAlpha = 0.75; g.font = '400 34px DM, Arial, sans-serif'; g.fillText(NOTE[key], c.width / 2, 1274); g.restore();
-    g.save(); g.globalAlpha = 0.85; illustration(g, key, c.width / 2, 1478, f.ink); g.restore();
-    g.save(); g.globalAlpha = 0.6; g.font = '700 26px DM, Arial, sans-serif'; spaced(g, 'SINGLE SERVING', c.width / 2, 1684, 7); g.restore();
+    g.save(); g.translate(c.width / 2 + 6, 700); g.rotate(-Math.PI / 2);
+    g.font = '700 200px DM, Arial, sans-serif'; spaced(g, 'normie.', 0, 0, -4); g.restore();
+    let fs = 50; g.font = `400 ${fs}px DM, Arial, sans-serif`;
+    while (fs > 28 && g.measureText(f.name).width > c.width * 0.8) { fs -= 2; g.font = `400 ${fs}px DM, Arial, sans-serif`; }
+    g.globalAlpha = 0.9; g.fillText(f.name, c.width / 2, 1250);
+    g.globalAlpha = 0.75; g.font = '400 34px DM, Arial, sans-serif';
+    g.fillText('single', c.width / 2, 1390); g.fillText('serving', c.width / 2, 1432); g.globalAlpha = 1;
   } else {
     g.font = '700 58px DM, Arial, sans-serif'; g.fillText('normie.', c.width / 2, 250);
     g.save(); g.globalAlpha = 0.5; g.setLineDash([12, 10]); g.lineWidth = 2.5;
@@ -135,12 +129,20 @@ function sealGeo(serratedTop) {
   return geo;
 }
 
+const MATS = {};
+function mats(key) {
+  if (MATS[key]) return MATS[key];
+  const f = FLAVORS[key];
+  const soft = { roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.4, sheen: 0.3, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff'), envMapIntensity: 0.3 };
+  return (MATS[key] = {
+    side: new THREE.MeshPhysicalMaterial({ color: f.pack, ...soft }),
+    front: new THREE.MeshPhysicalMaterial({ map: labelTexture(f, false, key), ...soft }),
+    back: new THREE.MeshPhysicalMaterial({ map: labelTexture(f, true, key), ...soft }),
+  });
+}
 export function makePacket(key) {
   const f = FLAVORS[key];
-  const soft = { roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.42, sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color('#ffffff') };
-  const side = new THREE.MeshPhysicalMaterial({ color: f.pack, ...soft });
-  const front = new THREE.MeshPhysicalMaterial({ map: labelTexture(f, false, key), ...soft });
-  const back = new THREE.MeshPhysicalMaterial({ map: labelTexture(f, true, key), ...soft });
+  const { side, front, back } = mats(key);
   const group = new THREE.Group();
   group.userData = { key, front, back };
 

@@ -2,6 +2,14 @@
 // Every frame is a pure function of scroll progress p (0..1), so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
 import { FLAVORS, makePacket } from './packets3d.js';
+import { makePouch, PH } from './pouch3d.js';
+import { EffectComposer } from './vendor/three-addons/postprocessing/EffectComposer.js';
+import { RenderPass } from './vendor/three-addons/postprocessing/RenderPass.js';
+import { ShaderPass } from './vendor/three-addons/postprocessing/ShaderPass.js';
+import { BokehPass } from './vendor/three-addons/postprocessing/BokehPass.js';
+import { UnrealBloomPass } from './vendor/three-addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from './vendor/three-addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from './vendor/three-addons/environments/RoomEnvironment.js';
 import { track } from './api.js?v=20261112a';
 
 const section = document.getElementById('hero-intro');
@@ -21,7 +29,7 @@ function boot(section) {
   const mobile = innerWidth < 800;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
 
   // returning visitors get the short version
   try { if (localStorage.getItem('normie-intro-seen')) section.classList.add('intro-short'); } catch (e) {}
@@ -39,61 +47,64 @@ function boot(section) {
   /* ---------- scene ---------- */
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 400);
-  const BG = { void: col('#121a15'), burst: col('#1d2a21'), matcha: col('#5d7a40'), acai: col('#7c2f52'), coffee: col('#7a5233'), cream: col('#f5f2eb') };
-  scene.background = BG.void.clone();
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bokeh = mobile ? null : new BokehPass(scene, camera, { focus: 10, aperture: 0.0016, maxblur: 0.009 });
+  if (bokeh) composer.addPass(bokeh);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), .25, .6, 1.0);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+  // film look: grain, vignette, slight lens fringing, gentle highlight roll-off
+  const film = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: .055 }, uVig: { value: .55 }, uCA: { value: .0016 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uGrain, uVig, uCA; varying vec2 vUv;
+      float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)) + uTime) * 43758.5453); }
+      void main(){
+        vec2 c = vUv - .5; float r = length(c);
+        vec3 col; col.r = texture2D(tDiffuse, vUv + c * uCA * r * 4.).r; col.g = texture2D(tDiffuse, vUv).g; col.b = texture2D(tDiffuse, vUv - c * uCA * r * 4.).b;
+        col *= 1. - uVig * smoothstep(.35, .95, r);
+        col += (h(vUv * 917.) - .5) * uGrain;
+        gl_FragColor = vec4(col, 1.);
+      }`,
+  });
+  composer.addPass(film);
+  const BG = { void: col('#16231b'), burst: col('#1f2f24'), matcha: col('#5d7a40'), acai: col('#7c2f52'), coffee: col('#7a5233'), cream: col('#f5f2eb') };
+  const bgCol = BG.void.clone();
+  // studio reflections
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+  // graded backdrop: lit center falling off to darker edges, like a lit cyc wall
+  const backdropMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false,
+    uniforms: { uA: { value: new THREE.Color() }, uB: { value: new THREE.Color() } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
+    fragmentShader: 'uniform vec3 uA; uniform vec3 uB; varying vec3 vP; void main(){ vec3 d = normalize(vP); float f = smoothstep(.15, 1.15, length(d.xy - vec2(0.,.15))); gl_FragColor = vec4(mix(uA, uB, f), 1.); }',
+  });
+  const backdropMesh = new THREE.Mesh(new THREE.SphereGeometry(150, 48, 24), backdropMat);
+  scene.background = bgCol;
 
-  const key = new THREE.DirectionalLight('#ffffff', 3.2); key.position.set(-4, 6, 6); scene.add(key);
-  const rim = new THREE.DirectionalLight('#ffffff', 5); scene.add(rim);
-  const fill = new THREE.HemisphereLight('#ffffff', '#222222', 0.9); scene.add(fill);
+  const key = new THREE.DirectionalLight('#ffffff', 1.7); key.position.set(-4, 6, 6); scene.add(key);
+  const rim = new THREE.DirectionalLight('#ffffff', 2.6); scene.add(rim);
+  const fill = new THREE.HemisphereLight('#ffffff', '#222222', 0.35); scene.add(fill);
   const glow = new THREE.PointLight('#ffe6b8', 0, 12, 1.5); scene.add(glow);
 
-  /* ---------- box ---------- */
-  const BW = 2.5, BH = 1.55, BD = 1.25;
-  function boxFace(w, h, kind) {
-    const c = document.createElement('canvas'); c.width = Math.round(w * 400); c.height = Math.round(h * 400);
-    const g = c.getContext('2d');
-    g.fillStyle = '#efe7d8'; g.fillRect(0, 0, c.width, c.height);
-    const img = g.getImageData(0, 0, c.width, c.height);
-    for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - .5) * 8; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; }
-    g.putImageData(img, 0, 0);
-    g.fillStyle = '#304236'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const bands = [FLAVORS.matcha.pack, FLAVORS.acai.pack, FLAVORS.coffee.pack];
-    if (kind === 'front' || kind === 'back') {
-      const bw = c.width / 3; bands.forEach((b, i) => { g.fillStyle = b; g.fillRect(i * bw, c.height - 64, bw + 1, 64); });
-      g.fillStyle = '#304236';
-      g.font = `700 ${Math.round(c.height * 0.36)}px DM, Arial, sans-serif`; g.fillText('normie.', c.width / 2, c.height * 0.42);
-      g.font = `400 ${Math.round(c.height * 0.07)}px DM, Arial, sans-serif`; g.globalAlpha = .85;
-      g.fillText(kind === 'front' ? 'matcha · açaí · tiramisu coffee' : 'tear. pour. stir.', c.width / 2, c.height * 0.7);
-      g.globalAlpha = 1;
-    } else if (kind === 'side') {
-      const bh = c.height / 3; bands.forEach((b, i) => { g.fillStyle = b; g.fillRect(0, i * bh, c.width, bh + 1); });
-      g.save(); g.translate(c.width / 2, c.height / 2); g.rotate(-Math.PI / 2); g.fillStyle = '#304236';
-      g.font = `700 ${Math.round(c.width * 0.34)}px DM, Arial, sans-serif`; g.fillText('normie.', 0, 0); g.restore();
-    } else if (kind === 'flap') {
-      g.fillStyle = '#304236'; g.fillRect(0, 0, c.width, c.height);
-      g.fillStyle = '#efe7d8'; g.font = `700 ${Math.round(c.height * 0.34)}px DM, Arial, sans-serif`; g.fillText('normie.', c.width / 2, c.height / 2);
-    } else if (kind === 'inside') {
-      g.fillStyle = '#d9cdb7'; g.fillRect(0, 0, c.width, c.height);
-    }
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
-  }
-  const paper = map => new THREE.MeshPhysicalMaterial({ map, roughness: .78, clearcoat: .15, clearcoatRoughness: .6 });
+  /* ---------- the three pouches (stand in for the brief's box) ---------- */
+  const BH = PH;
   const box = new THREE.Group();
-  const sideM = paper(boxFace(BD, BH, 'side')), frontM = paper(boxFace(BW, BH, 'front')), backM = paper(boxFace(BW, BH, 'back'));
-  const insideM = new THREE.MeshStandardMaterial({ color: '#cbbd9f', roughness: .9, side: THREE.BackSide });
-  const shell = new THREE.Mesh(new THREE.BoxGeometry(BW, BH, BD), [sideM, sideM, insideM, sideM, frontM, backM]);
-  // open top: hide the +y face by using an inner liner instead
-  shell.geometry.groups = shell.geometry.groups.filter(g => g.materialIndex !== 2);
-  box.add(shell);
-  const liner = new THREE.Mesh(new THREE.BoxGeometry(BW * .97, BH * .97, BD * .97), insideM); box.add(liner);
-  const flapM = paper(boxFace(BW, BD / 2, 'flap'));
-  const flaps = [1, -1].map(sz => {
-    const pivot = new THREE.Group(); pivot.position.set(0, BH / 2, sz * BD / 2);
-    const under = new THREE.MeshStandardMaterial({ color: '#d9cdb7', roughness: .9 });
-    const f = new THREE.Mesh(new THREE.BoxGeometry(BW, .025, BD / 2), [under, under, flapM, under, under, under]);
-    f.position.z = -sz * BD / 4; pivot.add(f); pivot.userData.sz = sz; box.add(pivot); return pivot;
-  });
+  const order = ['acai', 'matcha', 'coffee'];
+  const pouches = order.map(k => { const p = makePouch(k); box.add(p); return p; });
+  function layoutPouches(portrait) {
+    pouches.forEach((p, i) => { const o = i - 1; p.position.set(o * (portrait ? 1.3 : 2.25), 0, o === 0 ? .35 : (portrait ? -.4 : 0)); p.userData.baseRotY = o * (portrait ? -.35 : -.14); });
+  }
+  const pouchX = k => pouches[order.indexOf(k)].position.x;
   scene.add(box);
+  const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); const r = g.createRadialGradient(128, 128, 0, 128, 128, 128); r.addColorStop(0, 'rgba(255,240,210,1)'); r.addColorStop(.25, 'rgba(255,225,170,.55)'); r.addColorStop(1, 'rgba(255,220,160,0)'); g.fillStyle = r; g.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); })();
+  const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  flare.scale.set(4.5, 4.5, 1); scene.add(flare);
+  const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(0,0,0,.55)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+  const contact = new THREE.Mesh(new THREE.PlaneGeometry(8.2, 2.6), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0 }));
+  contact.rotation.x = -Math.PI / 2; scene.add(contact);
 
   /* ---------- packets ---------- */
   const keys = ['matcha', 'acai', 'coffee'];
@@ -104,7 +115,7 @@ function boot(section) {
     const m = makePacket(k); m.scale.setScalar(PS);
     m.traverse(o => { if (o.isMesh) { o.castShadow = false; } });
     const d = { k, i,
-      x0: (rnd(i) - .5) * BW * .7, z0: (rnd(i + 30) - .5) * BD * .5,
+      x0: (rnd(i) - .5) * 1.2, z0: (rnd(i + 30) - .5) * .3,
       vx: (rnd(i + 3) - .5) * 3.4, vy: 7.6 + rnd(i + 4) * 2.6, vz: (rnd(i + 5) - .5) * 2.8 + .6,
       rx: (rnd(i + 6) - .5) * 9, ry: (rnd(i + 7) - .5) * 9, rz: (rnd(i + 8) - .5) * 9,
       t0: 0.445 + (i / 12) * 0.06 };
@@ -119,17 +130,18 @@ function boot(section) {
   const streaks = new THREE.LineSegments(streakGeo, streakMat); scene.add(streaks);
   const sData = Array.from({ length: NS }, (_, i) => { const a = rnd(i + 900) * Math.PI * 2, r = 2 + rnd(i + 901) * 24; return { x: Math.cos(a) * r, y: Math.sin(a) * r * .7, z: rnd(i + 902) * RANGE }; });
 
+  const dot = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.4, 'rgba(255,255,255,.55)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return t; })();
   function cloud(n, color, size, seed) {
     const g = new THREE.BufferGeometry(); const a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { a[i * 3] = (rnd(seed + i) - .5) * 16; a[i * 3 + 1] = (rnd(seed + i + 5e3) - .5) * 14 + 2; a[i * 3 + 2] = (rnd(seed + i + 9e3) - .5) * 10 - 1; }
     g.setAttribute('position', new THREE.BufferAttribute(a, 3));
-    const pts = new THREE.Points(g, new THREE.PointsMaterial({ color, size, transparent: true, opacity: 0, depthWrite: false, sizeAttenuation: true }));
+    const pts = new THREE.Points(g, new THREE.PointsMaterial({ color, size: size * 2.2, map: dot, alphaTest: .01, transparent: true, opacity: 0, depthWrite: false, sizeAttenuation: true }));
     scene.add(pts); return pts;
   }
   const powder = cloud(mobile ? 400 : 900, '#9bbb63', .07, 100);
   const cocoa = cloud(mobile ? 250 : 500, '#5a3a24', .05, 2e4);
   function instanced(geo, color, n, seed) {
-    const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color, roughness: .35, transparent: true, opacity: 0 }), n);
+    const m = new THREE.InstancedMesh(geo, new THREE.MeshPhysicalMaterial({ color, roughness: .28, clearcoat: .8, clearcoatRoughness: .2, transparent: true, opacity: 0 }), n);
     m.userData.items = Array.from({ length: n }, (_, i) => ({ x: (rnd(seed + i) - .5) * 14, y: (rnd(seed + i + 50) - .5) * 12 + 2, z: (rnd(seed + i + 90) - .5) * 9 - 1, s: .7 + rnd(seed + i + 130) * .6, r: rnd(seed + i + 170) * 6 }));
     scene.add(m); return m;
   }
@@ -141,13 +153,13 @@ function boot(section) {
   /* ---------- layout ---------- */
   let W = 0, H = 0;
   function resize() {
-    const r = canvas.getBoundingClientRect(); W = r.width; H = r.height;
-    renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+    W = canvas.clientWidth; H = canvas.clientHeight; if (!W || !H) return;
+    renderer.setSize(W, H, true); composer.setSize(W, H); composer.setPixelRatio(renderer.getPixelRatio()); camera.aspect = W / H; camera.updateProjectionMatrix();
   }
   addEventListener('resize', resize);
   function gridTarget(i) {
     const k = i % 3, j = Math.floor(i / 3); // flavor, copy
-    if (camera.aspect >= 1) { const idx = k * 4 + j; return new THREE.Vector3((idx - 5.5) * .52, -.55, 0); }
+    if (camera.aspect >= 1) { const idx = k * 4 + j; return new THREE.Vector3((idx - 5.5) * .52, -.38, 0); }
     return new THREE.Vector3((j - 1.5) * .62, 2.45 - k * 1.62, 0);
   }
 
@@ -171,15 +183,17 @@ function boot(section) {
   /* ---------- frame ---------- */
   const v = new THREE.Vector3(), q = new THREE.Quaternion(), qFront = new THREE.Quaternion(), e = new THREE.Euler();
   function frame(time) {
+    if (canvas.clientWidth !== W || canvas.clientHeight !== H) resize();
     const t = time / 1000;
     const P = p;
 
     // background
-    const bg = scene.background;
+    const bg = bgCol;
     const focus = [['matcha', .57, .645], ['acai', .645, .72], ['coffee', .72, .80]];
     bg.copy(BG.void).lerp(BG.burst, seg(P, .38, .5));
     focus.forEach(([k, a, b]) => { const w = Math.sin(seg(P, a - .02, b + .02) * Math.PI); bg.lerp(BG[k], w * .9); });
     bg.lerp(BG.cream, easeIO(seg(P, .82, .95)));
+    const light = easeIO(seg(P, .82, .95));
 
     // camera path
     let cx = 0, cy = 0, cz = 12, lx = 0, ly = 0, lz = 0;
@@ -194,16 +208,21 @@ function boot(section) {
     // reveal: front-on
     cx = lerp(cx, 0, easeIO(rev)); cy = lerp(cy, 0, easeIO(rev)); ly = lerp(ly, 0, easeIO(rev)); lx = 0;
     const por = camera.aspect < 1;
-    if (por) { cz *= 1.8; cy *= 1.2; }
-    cz = lerp(cz, por ? 14 : 9.2, easeIO(rev));
+    if (por) { cz *= 1.45; cy *= 1.1; }
+    cz = lerp(cz, por ? 14 : 10.2, easeIO(rev));
     cx += Math.sin(t * .4) * .06 * (1 - rev); cy += Math.cos(t * .5) * .04 * (1 - rev);
-    camera.position.set(cx, cy, cz); camera.lookAt(lx, ly, lz);
+    // handheld: layered slow noise, calmer once the product settles
+    const hh = lerp(1, .35, rev);
+    cx += (Math.sin(t * 1.3) * .035 + Math.sin(t * 2.9 + 1) * .015) * hh;
+    cy += (Math.cos(t * 1.1) * .03 + Math.sin(t * 3.3) * .012) * hh;
+    camera.position.set(cx, cy, cz);
+    camera.lookAt(lx + Math.sin(t * .9) * .03 * hh, ly + Math.cos(t * 1.2) * .025 * hh, lz);
 
     // rim light orbit
     const ra = t * .6 + P * 12; rim.position.set(Math.cos(ra) * 8, 4, Math.sin(ra) * 8 - 2);
     const fc = focus.reduce((acc, [k, a, b]) => P >= a && P < b ? k : acc, null);
-    fill.color.set(fc ? FLAVORS[fc].pack : '#ffffff'); fill.intensity = lerp(.9, 1.6, fc ? 1 : 0) * lerp(1, 1.1, rev);
-    rim.intensity = lerp(5, 1.4, rev); key.intensity = lerp(3.2, 2.4, rev);
+    fill.color.set(fc ? FLAVORS[fc].pack : '#ffffff'); fill.intensity = lerp(.35, .7, fc ? 1 : 0) * lerp(1, 1.1, rev);
+    rim.intensity = lerp(2.6, .9, rev); key.intensity = lerp(1.7, 1.4, rev);
 
     // streaks: fast in cold open + fly-in, fade after
     const speed = lerp(2.2, .25, seg(P, .0, .1)) + Math.sin(seg(P, .1, .25) * Math.PI) * 5;
@@ -220,16 +239,16 @@ function boot(section) {
     const fb = back(fly);
     box.visible = P >= .1 && (P < .58 || (P > .82 && camera.aspect >= 1));
     box.position.set(0, 0, lerp(-90, 0, fb));
-    box.rotation.set((1 - easeOut(fly)) * 9, (1 - easeOut(fly)) * 13 + easeIO(spin) * Math.PI * 2, (1 - easeOut(fly)) * 3);
-    box.rotation.x += lerp(0, .12, spin) * (1 - burst);
-    const open = back(seg(P, .40, .46));
-    flaps.forEach(f => { f.rotation.x = f.userData.sz * open * 2.1; });
-    glow.position.set(0, BH / 2 + .2, 0); glow.intensity = Math.sin(seg(P, .41, .58) * Math.PI) * 60;
+    box.rotation.set((1 - easeOut(fly)) * 6, (1 - easeOut(fly)) * 9, (1 - easeOut(fly)) * 2);
+    box.rotation.x += lerp(0, .08, spin) * (1 - burst);
+    layoutPouches(camera.aspect < 1);
+    pouches.forEach((pp, i) => { pp.rotation.y = pp.userData.baseRotY * (1 - spin * (1 - burst)) + easeIO(seg(P, .25 + i * .02, .40 + i * .01)) * Math.PI * 2; });
+    glow.position.set(0, BH / 2 + .2, 0); glow.intensity = Math.sin(seg(P, .41, .58) * Math.PI) * 1.2;
     if (P > .8) {
       const land = back(seg(P, .84, .95));
-      box.position.set(0, camera.aspect >= 1 ? lerp(-9, -1.95, land) : lerp(-12, -3.6, land), 1.2);
-      box.rotation.set(.08, 0, 0); box.scale.setScalar(camera.aspect >= 1 ? .55 : .5);
-      flaps.forEach(f => { f.rotation.x = 0; });
+      box.position.set(0, camera.aspect >= 1 ? lerp(-9, -2.45, land) : lerp(-12, -3.6, land), 1.2);
+      box.rotation.set(.04, 0, 0); box.scale.setScalar(.42);
+      pouches.forEach(pp => { pp.rotation.y = pp.userData.baseRotY * .5; });
     } else box.scale.setScalar(1);
 
     // packets
@@ -239,7 +258,7 @@ function boot(section) {
       m.visible = true;
       // ballistic launch to the end of the burst beat, then slow zero-g drift
       const T = Math.min(P, .55) - d.t0; const tt = T * 11;
-      v.set(d.x0 + d.vx * tt, BH / 2 + d.vy * tt - 6.2 * tt * tt * .5, d.z0 + d.vz * tt);
+      v.set(pouchX(d.k) + d.x0 + d.vx * tt, BH / 2 + d.vy * tt - 6.2 * tt * tt * .5, d.z0 + d.vz * tt);
       const fT = seg(P, .55, 1);
       v.x += Math.sin(fT * 5 + i) * .5 * fT; v.y -= fT * (3.2 + rnd(i + 11) * 1.6); v.z += Math.cos(fT * 4 + i) * .4 * fT;
       v.y += Math.sin(t * .8 + i) * .05;
@@ -291,7 +310,22 @@ function boot(section) {
     end.style.pointerEvents = eIn > .5 ? 'auto' : 'none';
     section.classList.toggle('intro-light', P > .88);
 
-    renderer.render(scene, camera);
+    // focus pulls to whatever the shot is about
+    if (bokeh) {
+      let fd = camera.position.distanceTo(box.position);
+      const hk = focus.find(([, a, b]) => P >= a && P < b);
+      if (P >= .5 && P < .8) fd = hk ? camera.position.distanceTo(heroOf[hk[0]].position) : 7;
+      if (P >= .8) fd = camera.position.z;
+      bokeh.uniforms.focus.value = fd;
+      bokeh.uniforms.aperture.value = lerp(.0016, .0004, easeIO(rev)) * (P < .1 ? .3 : 1);
+    }
+    bloom.strength = .15 + glow.intensity / 1.2 * .35 + (1 - seg(P, 0, .1)) * .2;
+    flare.position.set(0, BH / 2 + .35, .2); flare.material.opacity = glow.intensity / 1.2 * .3; flare.visible = box.visible && flare.material.opacity > .01;
+    contact.position.set(box.position.x, box.position.y - BH / 2 * box.scale.y - .02, box.position.z);
+    contact.material.opacity = box.visible ? (P > .8 ? .35 : seg(P, .2, .27) * (1 - seg(P, .5, .56)) * .7) : 0;
+    film.uniforms.uTime.value = (t * 60) % 1000;
+    film.uniforms.uVig.value = lerp(.55, .22, light);
+    if (window.__noComposer) renderer.render(scene, camera); else composer.render();
   }
 
   /* ---------- loop ---------- */
