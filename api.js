@@ -1,6 +1,6 @@
 // Thin Supabase REST helper for public RPCs (waitlist, box reservation, contact, events).
 // Uses only the public publishable key; Row Level Security and SECURITY DEFINER functions guard the data.
-import { brand } from './config.js?v=20261112a';
+import { brand } from './config.js?v=20261113a';
 
 export const apiLive = Boolean(brand.supabaseUrl && brand.supabaseAnonKey);
 export const validEmail = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 254;

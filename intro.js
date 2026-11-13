@@ -3,9 +3,9 @@
 // settle into the same arrangement as the hero's 3D model, and the page carries on.
 // Every frame is a pure function of scroll progress, so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
-import { FLAVORS, makePacket, BODY_H } from './packets3d.js';
+import { FLAVORS, makePacket, BODY_H } from './packets3d.js?v=20261113a';
 import { RoomEnvironment } from './vendor/three-addons/environments/RoomEnvironment.js';
-import { track } from './api.js?v=20261112a';
+import { track } from './api.js?v=20261113a';
 
 const section = document.getElementById('hero-intro');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;

@@ -1,6 +1,6 @@
 // Loads the 3D studio (three.js, ~1.3 MB) right away on desktop.
 // On phones and touch screens, shows a static image first and loads 3D only when tapped.
-const V = '?v=20261112a';
+const V = '?v=20261113a';
 const ROOT = new URL('./', import.meta.url).href;
 const studios = [...document.querySelectorAll('[data-studio]')];
 const small = matchMedia('(max-width: 800px), (hover: none) and (pointer: coarse)').matches;
