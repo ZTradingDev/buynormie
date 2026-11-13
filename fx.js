@@ -7,7 +7,7 @@ const hero = document.querySelector('.pop-hero');
 const blobs = hero ? [...hero.querySelectorAll('.hero-blobs span')] : [];
 if (hero && blobs.length && !reduced && matchMedia('(pointer: fine)').matches) {
   let tx = 0, ty = 0, x = 0, y = 0, raf = 0;
-  const tick = () => { x += (tx - x) * 0.06; y += (ty - y) * 0.06; blobs.forEach((b, i) => { const d = (i + 1) * 18; b.style.translate = `${x * d}px ${y * d}px`; }); raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.001 ? requestAnimationFrame(tick) : 0; };
+  const tick = () => { x += (tx - x) * 0.03; y += (ty - y) * 0.03; blobs.forEach((b, i) => { const d = (i + 1) * 18; b.style.translate = `${x * d}px ${y * d}px`; }); raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.001 ? requestAnimationFrame(tick) : 0; };
   hero.addEventListener('pointermove', e => { const r = hero.getBoundingClientRect(); tx = (e.clientX - r.left) / r.width - 0.5; ty = (e.clientY - r.top) / r.height - 0.5; if (!raf) raf = requestAnimationFrame(tick); });
 }
 
@@ -32,7 +32,7 @@ if (!reduced) document.addEventListener('click', e => {
       { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 1 },
       { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 90}px) rotate(200deg) scale(1.15)`, opacity: 1, offset: 0.5 },
       { transform: `translate(${dx}px, ${dy}px) rotate(360deg) scale(${s})`, opacity: 0.2 },
-    ], { duration: 620, easing: 'cubic-bezier(.3,.7,.2,1)' }).finished.then(() => {
+    ], { duration: 1100, easing: 'cubic-bezier(.3,.7,.2,1)' }).finished.then(() => {
       img.remove(); slot.classList.remove('slot-incoming'); slot.classList.add('slot-pop');
       setTimeout(() => slot.classList.remove('slot-pop'), 450);
     });

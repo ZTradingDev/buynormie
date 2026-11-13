@@ -131,7 +131,7 @@ function init(section) {
     // swirl while stirring
     if (stir > 0 && stir < 1) {
       const a = Math.sin(stir * Math.PI);
-      const rot = stir * 14 + t * 1.2;
+      const rot = stir * 8 + t * 0.5;
       ctx.lineCap = 'round';
       for (let i = 0; i < 5; i++) {
         const yy = level + 18 + i * (base - level - 30) / 5;
@@ -156,7 +156,7 @@ function init(section) {
     // bubbles once mixed
     if (colorMix > 0.6) {
       for (let i = 0; i < 14; i++) {
-        const life = (t * 0.25 + rnd(i)) % 1;
+        const life = (t * 0.12 + rnd(i)) % 1;
         const bx = cx + (rnd(i + 9) - 0.5) * gwBot * 0.8;
         const by = lerp(base - 10, level + 8, life);
         ctx.fillStyle = `rgba(255,255,255,${0.35 * (1 - life) * (colorMix - 0.6) * 2.5})`;
@@ -214,7 +214,7 @@ function init(section) {
       const N = 320;
       for (let i = 0; i < N; i++) {
         const t0 = 0.37 + (i / N) * 0.24;
-        const u = (p - t0) / 0.045;
+        const u = (p - t0) / 0.07;
         if (u <= 0 || u >= 1) continue;
         const spread = (rnd(i) - 0.5);
         const x = lerp(ox + spread * 10, cx + spread * gwTop * 0.35, u) + Math.sin(t * 6 + i) * 1.2;
@@ -233,7 +233,7 @@ function init(section) {
     // ---- spoon while stirring ----
     if (stir > 0 && stir < 1) {
       const a = Math.sin(stir * Math.PI);
-      const sa = stir * 14 + t * 1.2;
+      const sa = stir * 8 + t * 0.5;
       const sx = cx + Math.cos(sa) * gwBot * 0.22, sy = level + 30 + Math.sin(sa) * 6;
       ctx.save(); ctx.globalAlpha = Math.min(1, a * 2.2);
       ctx.strokeStyle = '#c9c4ba'; ctx.lineWidth = 5; ctx.lineCap = 'round';
