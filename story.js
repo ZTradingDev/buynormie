@@ -3,7 +3,7 @@
 //  2. the three sticks drop in on their own strings over a giant "normie." wordmark
 //  3. one chapter per flavor: the page melts into its color, the stick hangs inside a post-style card,
 //     its ingredients drift past at different depths (small and far = slower and hazier)
-//  4. "it's in the pouch.": the three pouches settle into an arc and sticks drop into the front one
+//  4. "it's in the pouch.": a clear zip pouch opens, twelve sticks drop in, it zips shut
 // Every frame is a pure function of scroll progress (plus a tiny idle sway), so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
 import { FLAVORS, ORDER, makePacket, BODY_H, CAP_H } from './packets3d.js?v=20261115b';
@@ -103,7 +103,7 @@ function boot(section) {
     leaf: new THREE.MeshStandardMaterial({ color: '#7d9a4c', roughness: 0.55, side: THREE.DoubleSide }),
     powder: new THREE.MeshStandardMaterial({ color: '#94ae63', roughness: 1 }),
     berry: new THREE.MeshPhysicalMaterial({ color: '#2a0d22', roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.18 }),
-    berryFrost: new THREE.MeshStandardMaterial({ color: '#5a2c4a', roughness: 0.95 }),
+    berryFrost: new THREE.MeshPhysicalMaterial({ color: '#4a1838', roughness: 0.6, clearcoat: 0.6 }),
     bean: new THREE.MeshPhysicalMaterial({ color: '#3f2414', roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.4 }),
     cocoa: new THREE.MeshStandardMaterial({ color: '#5e3d26', roughness: 1 }),
     sponge: new THREE.MeshStandardMaterial({ color: '#e2c38e', roughness: 0.95 }),
@@ -132,10 +132,9 @@ function boot(section) {
         const side = n % 2 ? 1 : -1;
         mesh.userData = {
           home: (() => {
-            const hx = side * lerp(2.4, 5.2, rnd(seed + 2));
-            let hy = lerp(-3.6, 3.6, rnd(seed + 3));
-            if (hx < 0 && hy < 0.4) hy = -hy + 0.8;            // the copy lives bottom left
-            return new THREE.Vector3(hx, hy, lerp(-6, 1.8, depth));
+            // the left half belongs to the heading and copy: ingredients there stay in the top band, far back
+            if (side < 0) return new THREE.Vector3(-lerp(3.4, 6.5, rnd(seed + 2)), lerp(2.7, 4.2, rnd(seed + 3)), lerp(-7, -3, depth));
+            return new THREE.Vector3(lerp(2.6, 5.4, rnd(seed + 2)), lerp(-3.6, 3.6, rnd(seed + 3)), lerp(-6, 1.8, depth));
           })(),
           depth, size: lerp(0.6, 1.5, rnd(seed + 4)) * lerp(0.75, 1.25, depth),
           spin: new THREE.Vector3(rnd(seed + 5) - 0.5, rnd(seed + 6) - 0.5, rnd(seed + 7) - 0.5).multiplyScalar(2.2),
@@ -147,23 +146,93 @@ function boot(section) {
     return { group, bits };
   }
 
-  /* ---------- the pouches for the ending (the real packaging photos on cards) ---------- */
-  const ROOT = new URL('./', import.meta.url).href;
-  const loader = new THREE.TextureLoader();
-  const SIZE = { matcha: [876, 1256], acai: [876, 1290], coffee: [876, 1256] };
-  const PH = 3.1;
-  const pouches = ORDER.map(k => {
-    const tex = loader.load(`${ROOT}assets/pouch-${k}.webp`, () => draw());
-    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-    const [w, h] = SIZE[k];
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(PH * w / h, PH), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, depthWrite: false, fog: false }));
-    scene.add(m); return m;
-  });
-  // soft floor shadow under each pouch
-  const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(90,70,45,.35)'); r.addColorStop(1, 'rgba(90,70,45,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
-  const shadows = ORDER.map(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, fog: false })); scene.add(m); return m; });
-  // sticks that drop into the front pouch, behind its clear film
-  const dropSticks = ['matcha', 'matcha', 'matcha'].map(k => { const st = makePacket(k); st.scale.setScalar(0.5); scene.add(st); return st; });
+  /* ---------- the pouches for the ending: modelled clear zip pouches that open and fill ---------- */
+  const PW = 2.25, PHT = 3.0, PD = 0.78;                  // width, height, bottom depth
+  const ZIP = PHT / 2 - 0.42;                              // zipper line, measured from the center
+  function filmGeo() {
+    const g = new THREE.BoxGeometry(PW, ZIP + PHT / 2, PD, 16, 24, 8);
+    g.translate(0, (ZIP - PHT / 2) / 2, 0);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const v = (y + PHT / 2) / (ZIP + PHT / 2);           // 0 at the base, 1 at the zipper
+      const depth = lerp(1, 0.08, Math.pow(v, 0.8));        // gusseted base, flat top
+      const pinch = 1 - 0.05 * Math.pow(1 - v, 3);          // a little narrower at the base
+      const bulge = 1 + 0.06 * Math.sin(Math.PI * clamp((x / PW) + 0.5)) * (1 - v);
+      p.setXYZ(i, x * pinch, y, z * depth * bulge);
+    }
+    g.computeVertexNormals(); return g;
+  }
+  const FILM_GEO = filmGeo();
+  const film = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.06, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05,
+    transparent: true, opacity: 0.34, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.6 });
+  const seamMat = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.2, clearcoat: 1, transparent: true, opacity: 0.7, depthWrite: false });
+  // light catching the film: soft vertical streaks and a bright outline
+  const streakTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 8; const g = c.getContext('2d'); const lg = g.createLinearGradient(0, 0, 256, 0); [[0,0],[.08,.55],[.14,.1],[.2,0],[.62,0],[.7,.3],[.76,0],[.9,0],[.95,.4],[1,.1]].forEach(([o,a]) => lg.addColorStop(o, `rgba(255,255,255,${a})`)); g.fillStyle = lg; g.fillRect(0, 0, 256, 8); return new THREE.CanvasTexture(c); })();
+  const streakMat = new THREE.MeshBasicMaterial({ map: streakTex, transparent: true, depthWrite: false, toneMapped: false, opacity: 0.85 });
+  const edgeMat = new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85 });
+  function printTexture(draw, w, h) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+  }
+  const printed = [];                                      // redrawn once the brand font has loaded
+  function makePouch(key) {
+    const f = FLAVORS[key];
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(FILM_GEO, film); body.renderOrder = 5; g.add(body);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(FILM_GEO, 25), edgeMat); edges.renderOrder = 6; g.add(edges);
+    const streak = new THREE.Mesh(new THREE.PlaneGeometry(PW * 0.98, ZIP + PHT / 2 - 0.1), streakMat);
+    streak.position.set(0, (ZIP - PHT / 2) / 2, PD * 0.42); streak.rotation.x = -0.12; streak.renderOrder = 8; g.add(streak);
+    // side seals and the zipper band
+    [-1, 1].forEach(sx => { const seal = new THREE.Mesh(new THREE.BoxGeometry(0.06, PHT, 0.01), seamMat); seal.position.set(sx * PW / 2, 0, 0); seal.renderOrder = 6; g.add(seal); });
+    const zip = new THREE.Mesh(new THREE.BoxGeometry(PW, 0.07, 0.07), seamMat); zip.position.y = ZIP; zip.renderOrder = 6; g.add(zip);
+    // the two lips above the zipper, hinged at the zipper so the pouch can open
+    const lips = [1, -1].map(side => {
+      const hinge = new THREE.Group(); hinge.position.set(0, ZIP, side * 0.03);
+      const lip = new THREE.Mesh(new THREE.PlaneGeometry(PW, PHT / 2 - ZIP), film);
+      lip.position.y = (PHT / 2 - ZIP) / 2; lip.renderOrder = 6;
+      hinge.add(lip); hinge.userData.side = side; g.add(hinge); return hinge;
+    });
+    // print on the film: wordmark, and the cream label card
+    const draw = (ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = f.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 230px DM, Arial, sans-serif'; try { ctx.letterSpacing = '-12px'; } catch (e) {}
+      ctx.fillText('normie.', w / 2, h / 2);
+    };
+    const wordTex = printTexture(draw, 1024, 320); printed.push([wordTex, draw]);
+    const word = new THREE.Mesh(new THREE.PlaneGeometry(PW * 0.78, PW * 0.78 * 320 / 1024), new THREE.MeshBasicMaterial({ map: wordTex, transparent: true, depthWrite: false, toneMapped: false }));
+    word.position.set(0, PHT / 2 - 0.95, 0.09); word.renderOrder = 7; g.add(word);
+    const drawLabel = (ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#f6efe2'; ctx.beginPath(); ctx.roundRect(4, 4, w - 8, h - 8, 34); ctx.fill();
+      ctx.fillStyle = f.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.font = '700 96px DM, Arial, sans-serif'; try { ctx.letterSpacing = '-3px'; } catch (e) {}
+      ctx.fillText(f.name, 44, 130);
+      ctx.font = '400 46px DM, Arial, sans-serif'; try { ctx.letterSpacing = '0px'; } catch (e) {}
+      ctx.globalAlpha = 0.8; ctx.fillText('12 stick packs · single serving', 46, 214);
+    };
+    const labelTex = printTexture(drawLabel, 900, 270); printed.push([labelTex, drawLabel]);
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5 * 270 / 900), new THREE.MeshStandardMaterial({ map: labelTex, transparent: true, roughness: 0.85, depthWrite: false }));
+    label.position.set(-0.22, -PHT / 2 + 0.55, PD * 0.56); label.renderOrder = 9; g.add(label);
+    // twelve sticks: three rows of four, like the real pouch
+    const sticks = [];
+    for (let i = 0; i < 12; i++) {
+      const st = makePacket(key); st.scale.setScalar(0.5);
+      const row = Math.floor(i / 4), col = i % 4;
+      st.userData.slot = new THREE.Vector3((col - 1.5) * 0.43 + (row === 1 ? 0.12 : 0), -PHT / 2 + 0.06 + (BODY_H / 2 + CAP_H) * 0.5 + row * 0.04, (1 - row) * 0.17);
+      st.position.copy(st.userData.slot); g.add(st); sticks.push(st);
+    }
+    // fill order: back row first so the front row lands last, in plain view
+    sticks.sort((a, b) => a.userData.slot.z - b.userData.slot.z || a.userData.slot.x - b.userData.slot.x);
+    g.userData = { lips, sticks };
+    scene.add(g); return g;
+  }
+  const pouchKeys = ['matcha', 'acai', 'coffee'];
+  const pouches = pouchKeys.map(makePouch);
+  const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(90,70,45,.32)'); r.addColorStop(1, 'rgba(90,70,45,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+  const shadows = pouches.map(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; });
 
   /* ---------- the cast ---------- */
   const solo = hanger('matcha');
@@ -183,7 +252,7 @@ function boot(section) {
     renderer.setSize(W, H, false); camera.aspect = aspect;
     camera.position.z = aspect < 0.8 ? 10 * Math.pow(0.8 / aspect, 0.6) : 10;   // pull back on phones so sticks keep their size
     camera.updateProjectionMatrix();
-    scene.fog.near = camera.position.z - 2; scene.fog.far = camera.position.z + 8;   // haze only the far ingredients
+    scene.fog.near = camera.position.z + 1; scene.fog.far = camera.position.z + 16;   // haze only the far ingredients
     draw();
   }
   function progress() {
@@ -267,7 +336,7 @@ function boot(section) {
       c.bits.forEach(m => {
         const d = m.userData;
         const travel = (u - 0.5) * 9 * lerp(0.2, 0.6, d.depth);
-        m.position.set(d.home.x * (narrow ? 0.6 : 1) + stageX * 0.5, d.home.y + travel + Math.sin(t * 0.6 + d.phase) * 0.05, d.home.z);
+        m.position.set(d.home.x * (narrow ? 0.6 : 1) + (d.home.x > 0 ? stageX * 0.5 : 0), d.home.y + travel + Math.sin(t * 0.6 + d.phase) * 0.05, d.home.z);
         m.rotation.set(d.spin.x * u * 2 + d.phase, d.spin.y * u * 2 + t * 0.05, d.spin.z * u * 2);
         m.scale.setScalar(d.size * Math.max(0.0001, vis));
       });
@@ -288,38 +357,40 @@ function boot(section) {
     if (!chapters.some(c => c.h.rig.visible)) cards.forEach(c => { c.style.visibility = 'hidden'; c.style.opacity = 0; });
     setFlavor(flavor);
 
-    // ----- 4. it's in the pouch: three pouches settle into a calm arc, sticks drop into the front one -----
+    // ----- 4. it's in the pouch: the front pouch unzips, twelve sticks drop in, it zips shut;
+    //         the other two flavors stand behind it, already full -----
     {
       const u = x - T.end;
-      const vis = u > -0.3;
+      const vis = u > -0.35;
       const cx = narrow ? 0 : Math.min(1.9, halfW * 0.34);
-      const lay = narrow
-        ? [[-0.95, 1.15, -2.2, 0.32, 0.8], [0, 0.85, 0, 0, 1], [0.95, 1.15, -2.2, -0.32, 0.8]]
-        : [[-1.75, -0.15, -2.4, 0.3, 0.86], [0, -0.35, 0, 0, 1], [1.75, -0.15, -2.4, -0.3, 0.86]];
-      const order = [1, 0, 2];                               // matcha front and center, açaí left, tiramisu coffee right
-      pouches.forEach((m, i) => {
-        m.visible = shadows[i].visible = vis;
+      const sc0 = narrow ? 0.72 : 0.92;
+      const lay = [[0, narrow ? 0.55 : -0.45, 0.6, 0, 1], [-2.5, narrow ? 1.0 : 0.05, -2.8, 0.35, 0.8], [2.5, narrow ? 1.0 : 0.05, -2.8, -0.35, 0.8]];
+      pouches.forEach((g, i) => {
+        g.visible = shadows[i].visible = vis;
         if (!vis) return;
-        const [lx, ly, lz, ry, sc] = lay[order[i]];
-        const d = smooth(seg(u, -0.3 + (order[i] === 1 ? 0 : 0.12), 0.2 + (order[i] === 1 ? 0 : 0.12)));
-        const bob = Math.sin(t * 0.6 + i * 1.7) * 0.02;
-        m.position.set(cx + lx * (narrow ? 1 : 1), ly - (1 - d) * 5 + bob, lz);
-        m.rotation.set(0, ry + Math.sin(t * 0.35 + i) * 0.015, 0);
-        m.scale.setScalar(sc * (narrow ? 0.78 : 1));
-        m.renderOrder = order[i] === 1 ? 3 : 1;
-        const sh = shadows[i];
-        sh.position.set(m.position.x, ly - PH / 2 * sc * (narrow ? 0.78 : 1) + 0.02, lz + 0.05);
-        sh.rotation.x = -Math.PI / 2; sh.scale.set(2.4 * sc, 0.7 * sc, 1);
-        sh.material.opacity = d;
-      });
-      const front = pouches[0];
-      dropSticks.forEach((st, i) => {
-        const d = seg(u, 0.3 + i * 0.12, 0.55 + i * 0.12);
-        st.visible = vis && d > 0 && d < 1;
-        if (!st.visible) return;
-        const k = d * d;
-        st.position.set(front.position.x + (i - 1) * 0.32, lerp(4.2, front.position.y + 0.1, k), front.position.z - 0.12);
-        st.rotation.set(0, 0.2 * (i - 1), (1 - k) * (i % 2 ? 0.35 : -0.35));
+        const [lx, ly, lz, ry, sc] = lay[i];
+        const d = smooth(seg(u, -0.35 + i * 0.08, 0.15 + i * 0.08));
+        const S2 = sc * sc0;
+        g.scale.setScalar(S2);
+        g.position.set(cx + lx * (narrow ? 0.55 : 1), ly - (1 - d) * 6 + Math.sin(t * 0.6 + i * 1.7) * 0.02, lz);
+        g.rotation.set(0.04, ry + Math.sin(t * 0.3 + i) * 0.02, 0);
+        const sh = shadows[i]; sh.position.set(g.position.x, g.position.y - PHT / 2 * S2 + 0.01, lz + 0.1); sh.scale.set(PW * 1.5 * S2, PD * 1.4 * S2, 1); sh.material.opacity = d;
+        const { lips, sticks } = g.userData;
+        if (i === 0) {
+          const open = smooth(seg(u, 0.12, 0.28)) * (1 - smooth(seg(u, 0.88, 1.02)));
+          lips.forEach(h => { h.rotation.x = h.userData.side * lerp(-0.06, 0.8, open); });
+          sticks.forEach((st, j) => {
+            const k = seg(u, 0.24 + j * 0.045, 0.4 + j * 0.045);
+            st.visible = k > 0;
+            const e = 1 - Math.pow(1 - k, 2);                    // fall, then ease into the slot
+            const sl = st.userData.slot;
+            st.position.set(sl.x + (1 - e) * (j % 2 ? 0.25 : -0.25), lerp(sl.y + 4.6, sl.y, e), sl.z);
+            st.rotation.set(0, 0, (1 - e) * (j % 2 ? 0.5 : -0.5));
+          });
+        } else {
+          lips.forEach(h => { h.rotation.x = h.userData.side * -0.06; });
+          sticks.forEach(st => { st.visible = true; st.position.copy(st.userData.slot); st.rotation.set(0, 0, 0); });
+        }
       });
     }
 
@@ -333,14 +404,17 @@ function boot(section) {
         o = clamp(Math.min(seg(u, -0.05, 0.15), 1 - seg(u, 0.85, 1.05))); s = lerp(1.06, 1, smooth(clamp(u * 2))); dy = (0.5 - u) * 8;
       }
       w.style.opacity = o.toFixed(3);
-      w.style.transform = `translate(-50%, calc(-50% + ${dy.toFixed(2)}vh)) scale(${s.toFixed(4)})`;
+      // the wordmark is centered; flavor names sit left, clear of the card, as the chapter's heading
+      w.style.transform = k === 'normie'
+        ? `translate(-50%, calc(-50% + ${dy.toFixed(2)}vh)) scale(${s.toFixed(4)})`
+        : `translate(0, calc(-50% + ${(dy * 0.4).toFixed(2)}vh)) scale(${s.toFixed(4)})`;
     });
     copies.forEach(el => {
       const k = el.dataset.copy;
       let o = 0;
       if (k === 'intro') o = win(x, 0.85, 1.4, 0.12);
       else if (k === 'end') o = smooth(seg(x - T.end, 0.25, 0.55));
-      else { const u = x - (T.ch + ORDER.indexOf(k) * T.chLen); o = clamp(Math.min(seg(u, 0.05, 0.22), 1 - seg(u, 0.8, 0.95))); }
+      else { const u = x - (T.ch + ORDER.indexOf(k) * T.chLen); o = clamp(Math.min(seg(u, -0.02, 0.1), 1 - seg(u, 0.88, 0.98))); }
       show(el, o);
     });
     if (hint) hint.style.opacity = (1 - seg(x, 0.05, 0.3)).toFixed(3);
@@ -365,6 +439,6 @@ function boot(section) {
   }).observe(section);
   addEventListener('resize', resize);
   addEventListener('scroll', () => { if (performance.now() - lastDraw > 60) draw(); }, { passive: true });   // keep frames in sync even if animation frames are throttled
-  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { resize(); section.classList.add('story-ready'); });
+  (document.fonts ? document.fonts.load('700 230px DM').then(() => document.fonts.ready) : Promise.resolve()).then(() => { printed.forEach(([tex, fn]) => { fn(tex.image.getContext('2d'), tex.image.width, tex.image.height); tex.needsUpdate = true; }); resize(); section.classList.add('story-ready'); });
   resize();
 }

@@ -648,8 +648,8 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 .story-word{position:absolute;left:50%;top:50%;margin:0;z-index:1;font-weight:700;letter-spacing:-.065em;line-height:.9;white-space:nowrap;
   font-size:clamp(110px,24vw,420px);color:var(--f-ink);opacity:0;pointer-events:none;will-change:transform,opacity;transform:translate(-50%,-50%)}
 .story-word[data-word=normie]{color:#304236;top:58%}
-.story-word:not([data-word=normie]){top:44%}
-.story-word[data-word=coffee]{font-size:clamp(96px,19vw,340px)}
+.story-word:not([data-word=normie]){left:var(--gutter);top:40%;transform-origin:left center;font-size:clamp(88px,11.5vw,210px);letter-spacing:-.06em}
+.story-word[data-word=coffee]{font-size:clamp(64px,6.6vw,128px)}
 
 /* post-style card that frames the hanging stick: sized by story.js so the stick fills its photo area */
 .story-post{--media-w:260px;--media-h:360px;--media-top:56px;position:absolute;z-index:2;width:calc(var(--media-w) + 24px);opacity:0;visibility:hidden;pointer-events:none;
@@ -675,9 +675,9 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
   background:rgb(255 255 255 / .55);border:1px solid rgb(255 255 255 / .8);border-radius:14px;font-size:13px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .story-flavor-list li{display:flex;align-items:center;gap:8px}
 .story-flavor-list i{width:9px;height:9px;border-radius:50%}
-.story-copy-flavor{left:var(--gutter);bottom:7vh;max-width:min(420px,34vw)}
+.story-copy-flavor{left:var(--gutter);top:calc(40% + clamp(60px,7vw,120px));max-width:min(420px,34vw)}
 .story-copy-end{left:var(--gutter);top:50%;margin-top:-150px;max-width:min(440px,38vw)}
-.story-copy-flavor .story-kicker{margin-bottom:8px}.story-copy-flavor .story-lead{margin-top:0;font-size:18px;opacity:.85}
+.story-copy-flavor .story-kicker{margin-bottom:10px;opacity:1}.story-copy-flavor .story-lead{margin-top:0;font-size:21px;line-height:1.35;opacity:1;max-width:22ch}
 .story-copy-flavor h2,.story-copy-end h2{font-size:clamp(56px,6.4vw,108px)}
 .story-chips{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 0;padding:0}
 .story-chips li{font-size:12px;padding:6px 11px;border-radius:100px;border:1px solid color-mix(in srgb,var(--f-ink) 22%,transparent);color:var(--f-ink)}
@@ -714,6 +714,9 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
  .story{height:600vh}
  .story-word{top:46%}
  .story-word[data-word=normie]{top:66%}
+ .story-word:not([data-word=normie]){left:20px;top:calc(var(--header) + 44px);font-size:64px}
+ .story-word[data-word=coffee]{font-size:52px}
+ .story-copy-flavor{top:auto}
  .story-post{width:min(64vw,260px)}
  .story-copy-intro{top:calc(var(--header) + 3vh)}
  .story-flavor-list{display:none}
