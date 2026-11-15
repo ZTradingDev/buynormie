@@ -642,7 +642,7 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 /* ===================================================================
    home story (story.js): hanging sticks, flavor chapters, post card, box ending
    =================================================================== */
-.story{position:relative;height:620vh;background:var(--f-bg);transition:background-color 600ms var(--ease-out);color:var(--f-ink)}
+.story{position:relative;height:700vh;background:var(--f-bg);transition:background-color 600ms var(--ease-out);color:var(--f-ink)}
 .story-stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 .story-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:3;pointer-events:none}
 .story-word{position:absolute;left:50%;top:50%;margin:0;z-index:1;font-weight:700;letter-spacing:-.065em;line-height:.9;white-space:nowrap;
@@ -711,7 +711,7 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 .intro-active .sticky-order{transform:translateY(120%)!important;pointer-events:none}
 
 @media(max-width:800px){
- .story{height:600vh}
+ .story{height:680vh}
  .story-word{top:46%}
  .story-word[data-word=normie]{top:44%;font-size:24vw}
  .story-word:not([data-word=normie]){left:20px;top:calc(var(--header) + 44px);font-size:64px}
@@ -764,3 +764,11 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 /* a stick taken out leaves its slot empty in place */
 .slot-cleared{animation:slotClear 260ms var(--ease-out)}
 @keyframes slotClear{from{transform:scale(.85);background:rgb(48 66 54 / .08)}to{transform:none;background:transparent}}
+
+/* açaí flips the layout: stick and card on the left, heading and copy on the right */
+@media(min-width:801px){
+ .story-word[data-word=acai]{left:auto;right:var(--gutter);transform-origin:right center;text-align:right}
+ .story-copy[data-copy=acai]{left:auto;right:var(--gutter);text-align:right}
+ .story-copy[data-copy=acai] .story-lead{margin-left:auto}
+ .story-copy[data-copy=acai] .story-ctas{justify-content:flex-end}
+}

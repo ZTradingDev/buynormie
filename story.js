@@ -32,7 +32,7 @@ function boot(section) {
   const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
   // timeline, in "units" of scroll (one unit is roughly one screen of scrolling)
-  const T = { solo: [0, 0.75], trio: [0.55, 1.55], ch: 1.45, chLen: 1, end: 4.45, total: 5.6 };
+  const T = { solo: [0, 0.75], trio: [0.55, 1.55], ch: 1.45, chLen: 1.25, end: 5.2, total: 6.35 };   // each chapter: 1 unit on screen + a 0.25 breath
 
   // must match the CSS --f-bg values so the haze blends into the page
   const BG = { base: new THREE.Color('#f3efe6'), matcha: new THREE.Color('#e9ecdd'), acai: new THREE.Color('#f2e4e3'), coffee: new THREE.Color('#efe4d6') };
@@ -51,6 +51,7 @@ function boot(section) {
   const S = 1.1;                     // stick scale
   const TOP = (BODY_H / 2 + CAP_H) * S;
   const stringMat = new THREE.MeshBasicMaterial({ color: '#7d7264', transparent: true, opacity: 0.5 });
+  const hiddenString = new THREE.MeshBasicMaterial({ visible: false });
   function hanger(key) {
     const rig = new THREE.Group();                 // pivot point
     const stick = makePacket(key); stick.scale.setScalar(S);
@@ -143,6 +144,14 @@ function boot(section) {
         };
         group.add(mesh); bits.push(mesh);
       }
+    });
+    // two big pieces right by the camera, half off the edge of the screen (sharp, faster: the near layer)
+    const [g0, m0] = RECIPE[key][0];
+    [[2.0, 0], [-1.6, 1]].forEach(([y, j]) => {
+      const mesh = new THREE.Mesh(Array.isArray(GEO[g0]) ? GEO[g0][j] : GEO[g0], MAT[m0]);
+      mesh.userData = { home: new THREE.Vector3(0, y, 4.2), depth: 1, size: 2.4 - j * 0.4, big: true,
+        spin: new THREE.Vector3(0.3, 0.5, 0.2), phase: j * 2 };
+      group.add(mesh); bits.push(mesh);
     });
     return { group, bits };
   }
@@ -287,6 +296,7 @@ function boot(section) {
     const narrow = aspect < 0.8;
     const halfH = Math.tan(THREE.MathUtils.degToRad(16)) * camera.position.z, halfW = halfH * aspect;
     const stageX = narrow ? 0 : Math.min(1.4, halfW * 0.28);
+    const chapterX = i => (i === 1 ? -1 : 1) * stageX;
 
     // ----- 1. open on the wordmark with a hairline running off the bottom of the screen;
     //         scrolling reels the stick up into view, it swings, turns, and lifts out -----
@@ -303,7 +313,7 @@ function boot(section) {
         if (hint) { const r = hint.getBoundingClientRect(), cr = canvas.getBoundingClientRect(); anchor = (1 - 2 * ((r.bottom + 8 - cr.top) / H)) * halfH; }
         const below = -halfH - TOP - 0.4;                      // the stick waits below the fold
         const lift = (0.15 - below) * rise;                    // scrolling pulls the whole string up
-        const swing = rise * (pendulum(u * 2.4 + 0.1, 0.16, 9, 2.2) + Math.sin(t * 1.1) * 0.03) + (1 - rise) * Math.sin(sinceLoad * 1.3) * 0.003;
+        const swing = rise * (pendulum(u * 2.4 + 0.1, 0.16, 9, 2.2) + Math.sin(t * 1.1) * 0.03) + (1 - rise) * (Math.sin(sinceLoad * 1.9) * 0.012 + Math.sin(sinceLoad * 0.7) * 0.006);
         hang(solo, 0, below + lift + leave * 6, swing, rise * (u * Math.PI * 2.1) + Math.sin(t * 0.45) * 0.3 * rise, 0, 1, anchor + lift + leave * 6);
       }
     }
@@ -312,9 +322,19 @@ function boot(section) {
       const vis = x > 0.45 && x < 1.75;
       const spread = narrow ? Math.min(1.05, halfW * 0.56) : Math.min(2.2, halfW * 0.3);
       const tilts = [-0.1, 0.02, 0.11], heights = [0.05, -0.15, 0.0], delays = [0, 0.1, 0.05];
+      const carry = smooth(seg(x, 1.22, 1.5));              // matcha travels into its chapter instead of cutting
       trio.forEach((h, i) => {
-        h.rig.visible = vis;
-        if (!vis) return;
+        h.rig.visible = vis && !(i === 0 && x >= 1.5);
+        if (!h.rig.visible) return;
+        if (i === 0 && carry > 0) {
+          const sx0 = (0 - 1) * spread + (narrow ? 0 : 0.35), sy0 = heights[0] - (narrow ? 0.1 : 0.35);
+          const tx = chapterX(0), ty = -0.05;
+          hang(h, lerp(sx0, tx, carry), lerp(sy0, ty, carry), Math.sin(t * 0.7) * 0.008 * (1 - carry),
+            lerp(lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))), -0.444, carry), tilts[0] * (1 - carry), lerp(narrow ? 1.0 : 1.05, 0.8, carry));
+          h.string.material = carry > 0.55 ? hiddenString : stringMat;
+          return;
+        }
+        h.string.material = stringMat;
         const enter = smooth(seg(x, 0.6 + delays[i], 0.95 + delays[i]));
         const leave = smooth(seg(x, 1.3 + delays[i] * 0.5, 1.6 + delays[i] * 0.5));
         const settle = clamp(x - 0.6 - delays[i]);
@@ -327,21 +347,25 @@ function boot(section) {
     let flavor = null;
     chapters.forEach((c, i) => {
       const u = x - (T.ch + i * T.chLen);                 // 0..1 while this chapter is on screen
-      const vis = clamp(Math.min(seg(u, -0.18, 0.1), 1 - seg(u, 0.9, 1.18)));
+      const vis = clamp(Math.min(i === 0 ? seg(u, -0.18, 0.1) : seg(u, 0, 0.14), 1 - seg(u, 0.84, 1.0)));   // gone by u = 1: the breath before the next flavor
       c.h.rig.visible = c.group.visible = vis > 0.001;
       if (u >= 0 && u < 1) flavor = c.key;
-      if (!c.group.visible) return;
+      if (!c.group.visible) { const cd = cards[i]; if (cd) { cd.style.visibility = 'hidden'; cd.style.opacity = 0; } return; }
       // no string here: the stick simply appears in its card, turns slowly, and goes
-      const appear = smooth(seg(u, -0.06, 0.12)), go = smooth(seg(u, 0.86, 1.02));
+      const appear = i === 0 ? (x >= 1.5 ? 1 : 0) : smooth(seg(u, 0, 0.16)), go = smooth(seg(u, 0.8, 0.98));
       c.h.string.visible = false;
-      hang(c.h, stageX, -0.05 - (1 - appear) * 0.25 + go * 0.25, 0,
+      hang(c.h, chapterX(i), -0.05 - (1 - appear) * 0.25 + go * 0.25, 0,
         lerp(-0.45, 0.45, smooth(seg(u, 0, 1))) + Math.sin(t * 0.5 + i) * 0.03);
       const csc = 0.8 * lerp(0.94, 1, appear);
       c.h.stick.scale.setScalar(appear * (1 - go) > 0.001 ? S * csc : 0.0001);
       c.bits.forEach(m => {
         const d = m.userData;
         const travel = (u - 0.5) * 9 * lerp(0.2, 0.6, d.depth);
-        m.position.set(d.home.x * (narrow ? 0.6 : 1) + (d.home.x > 0 ? stageX * 0.5 : 0), d.home.y + travel + Math.sin(t * 0.6 + d.phase) * 0.05, d.home.z);
+        const side = i === 1 && !narrow ? -1 : 1;
+        if (d.big) {
+          const zD = camera.position.z - d.home.z, edge = Math.tan(THREE.MathUtils.degToRad(16)) * zD * aspect;
+          m.position.set(side * (edge + 0.15), d.home.y + travel * 1.6, d.home.z);
+        } else m.position.set(side * (d.home.x * (narrow ? 0.6 : 1) + (d.home.x > 0 ? stageX * 0.5 : 0)), d.home.y + travel + Math.sin(t * 0.6 + d.phase) * 0.05, d.home.z);
         m.rotation.set(d.spin.x * u * 2 + d.phase, d.spin.y * u * 2 + t * 0.05, d.spin.z * u * 2);
         m.scale.setScalar(d.size * Math.max(0.0001, vis));
       });
@@ -350,14 +374,14 @@ function boot(section) {
       if (card) {
         // the stick's real extent: cap crimp on top, bottom crimp below (the model is not centered)
         const sc8 = S * 0.8, cy = -0.05;
-        const [sx] = toScreen(stageX, cy);
+        const [sx] = toScreen(chapterX(i), cy);
         const [, st] = toScreen(stageX, cy + (BODY_H / 2 + CAP_H) * sc8), [, sb] = toScreen(stageX, cy - (BODY_H / 2 + 0.12) * sc8);
         const pad = (sb - st) * 0.1;
         const mediaH = (sb - st) + pad * 2, mediaW = mediaH * 0.74;
         card.style.setProperty('--media-w', `${mediaW.toFixed(0)}px`);
         card.style.setProperty('--media-h', `${mediaH.toFixed(0)}px`);
         const sy = st - pad - 56;                           // card top: media top minus the header row
-        const o = clamp(Math.min(seg(u, 0.02, 0.2), 1 - seg(u, 0.78, 0.95)));
+        const o = clamp(Math.min(seg(u, 0.04, 0.2), 1 - seg(u, 0.76, 0.92)));
         card.style.left = `${sx.toFixed(1)}px`; card.style.top = `${sy.toFixed(1)}px`;
         card.style.opacity = o.toFixed(3); card.style.visibility = o > 0.01 ? 'visible' : 'hidden';
         card.style.transform = `translate(-50%, ${((1 - o) * 24).toFixed(1)}px)`;
@@ -410,20 +434,20 @@ function boot(section) {
       if (k === 'normie') { o = 1 - smooth(seg(x, 0.3, 0.55)); s = lerp(1, 1.04, smooth(seg(x, 0.1, 0.55))); dy = 0; }   // the wordmark belongs to the landing screen only
       else {
         const i = ORDER.indexOf(k), u = x - (T.ch + i * T.chLen);
-        o = clamp(Math.min(seg(u, -0.05, 0.15), 1 - seg(u, 0.85, 1.05))); s = lerp(1.06, 1, smooth(clamp(u * 2))); dy = (0.5 - u) * 8;
+        o = clamp(Math.min(seg(u, 0, 0.16), 1 - seg(u, 0.82, 0.98))); s = lerp(1.06, 1, smooth(clamp(u * 2))); dy = (0.5 - u) * 8;
       }
       w.style.opacity = o.toFixed(3);
       // the wordmark is centered; flavor names sit left, clear of the card, as the chapter's heading
       w.style.transform = k === 'normie'
         ? `translate(-50%, calc(-50% + ${dy.toFixed(2)}vh)) scale(${s.toFixed(4)})`
-        : `translate(0, calc(-50% + ${(dy * 0.4).toFixed(2)}vh)) scale(${s.toFixed(4)})`;
+        : `translate(0, calc(-50% + ${(dy * 0.4).toFixed(2)}vh)) scale(${s.toFixed(4)})`;   // açaí's heading is right-aligned in CSS
     });
     copies.forEach(el => {
       const k = el.dataset.copy;
       let o = 0;
       if (k === 'intro') o = win(x, 0.85, 1.4, 0.12);
       else if (k === 'end') o = smooth(seg(x - T.end, 0.25, 0.55));
-      else { const u = x - (T.ch + ORDER.indexOf(k) * T.chLen); o = clamp(Math.min(seg(u, -0.02, 0.1), 1 - seg(u, 0.88, 0.98))); }
+      else { const u = x - (T.ch + ORDER.indexOf(k) * T.chLen); o = clamp(Math.min(seg(u, 0.02, 0.14), 1 - seg(u, 0.8, 0.94))); }
       show(el, o);
     });
     if (hint) hint.style.opacity = (1 - seg(x, 0.02, 0.12)).toFixed(3);
