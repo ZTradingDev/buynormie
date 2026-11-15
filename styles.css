@@ -645,23 +645,24 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 .story{position:relative;height:620vh;background:var(--f-bg);transition:background-color 600ms var(--ease-out);color:var(--f-ink)}
 .story-stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 .story-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:3;pointer-events:none}
-.story-word{position:absolute;left:50%;top:52%;margin:0;z-index:1;font-weight:700;letter-spacing:-.065em;line-height:.9;white-space:nowrap;
+.story-word{position:absolute;left:50%;top:50%;margin:0;z-index:1;font-weight:700;letter-spacing:-.065em;line-height:.9;white-space:nowrap;
   font-size:clamp(110px,24vw,420px);color:var(--f-ink);opacity:0;pointer-events:none;will-change:transform,opacity;transform:translate(-50%,-50%)}
-.story-word[data-word=normie]{color:#304236}
+.story-word[data-word=normie]{color:#304236;top:58%}
+.story-word:not([data-word=normie]){top:44%}
 .story-word[data-word=coffee]{font-size:clamp(96px,19vw,340px)}
 
-/* post-style card that frames the hanging stick */
-.story-post{position:absolute;z-index:2;width:clamp(240px,24vw,340px);opacity:0;visibility:hidden;pointer-events:none;
-  border-radius:22px;padding:12px;background:rgb(255 255 255 / .42);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);
-  border:1px solid rgb(255 255 255 / .7);box-shadow:0 1px 2px rgb(0 0 0 / .04),0 30px 60px -28px rgb(60 40 30 / .35);color:var(--f-ink);font-size:13px}
-.story-post header{display:flex;align-items:center;gap:8px;padding:2px 2px 10px}
+/* post-style card that frames the hanging stick: sized by story.js so the stick fills its photo area */
+.story-post{--media-w:260px;--media-h:360px;--media-top:56px;position:absolute;z-index:2;width:calc(var(--media-w) + 24px);opacity:0;visibility:hidden;pointer-events:none;
+  border-radius:24px;padding:12px;background:rgb(255 255 255 / .62);border:1px solid rgb(255 255 255 / .85);
+  box-shadow:0 1px 2px rgb(0 0 0 / .04),0 40px 80px -40px rgb(60 40 30 / .35);color:var(--f-ink);font-size:13px}
+.story-post header{display:flex;align-items:center;gap:8px;height:44px;padding:0 4px}
 .post-avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--f-ink);color:var(--f-tint);font-weight:700;font-size:11px;letter-spacing:-.04em}
-.post-user{font-weight:700}.post-tag{opacity:.6}.post-more{margin-left:auto;opacity:.5;letter-spacing:1px}
-.post-media{aspect-ratio:4/5;border-radius:14px;background:linear-gradient(160deg,rgb(255 255 255 / .55),rgb(255 255 255 / .12));border:1px solid rgb(255 255 255 / .55)}
-.post-actions{display:flex;gap:12px;padding:10px 2px 6px}
+.post-user{font-weight:700}.post-tag{opacity:.55}.post-more{margin-left:auto;opacity:.45;letter-spacing:1px}
+.post-media{height:var(--media-h);border-radius:16px;background:radial-gradient(120% 80% at 50% 30%,var(--f-tint),color-mix(in srgb,var(--f-bg) 70%,#fff))}
+.post-actions{display:flex;gap:14px;padding:12px 4px 6px}
 .post-actions svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
 .post-actions .post-save{margin-left:auto}
-.post-caption{margin:0;padding:0 2px 2px;line-height:1.4;opacity:.85}
+.post-caption{margin:0;padding:0 4px 4px;line-height:1.4;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* copy */
 .story-copy{position:absolute;z-index:4;opacity:0;visibility:hidden;will-change:opacity,transform}
@@ -712,6 +713,7 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 @media(max-width:800px){
  .story{height:600vh}
  .story-word{top:46%}
+ .story-word[data-word=normie]{top:66%}
  .story-post{width:min(64vw,260px)}
  .story-copy-intro{top:calc(var(--header) + 3vh)}
  .story-flavor-list{display:none}

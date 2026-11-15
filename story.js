@@ -3,7 +3,7 @@
 //  2. the three sticks drop in on their own strings over a giant "normie." wordmark
 //  3. one chapter per flavor: the page melts into its color, the stick hangs inside a post-style card,
 //     its ingredients drift past at different depths (small and far = slower and hazier)
-//  4. "it's in the box.": the box sits open, the sticks drop in, a receipt slides down
+//  4. "it's in the pouch.": the three pouches settle into an arc and sticks drop into the front one
 // Every frame is a pure function of scroll progress (plus a tiny idle sway), so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
 import { FLAVORS, ORDER, makePacket, BODY_H, CAP_H } from './packets3d.js?v=20261115b';
@@ -117,9 +117,9 @@ function boot(section) {
     sponge: lumpy(new THREE.BoxGeometry(0.62, 0.2, 0.22, 6, 3, 3), 0.05, 9),
   };
   const RECIPE = {
-    matcha: [['leaf', 'leaf', 7], ['powder', 'powder', 7]],
-    acai: [['berry', 'berry', 11], ['berry', 'berryFrost', 3]],
-    coffee: [['bean', 'bean', 8], ['cocoa', 'cocoa', 4], ['sponge', 'sponge', 2]],
+    matcha: [['leaf', 'leaf', 5], ['powder', 'powder', 3]],
+    acai: [['berry', 'berry', 7], ['berry', 'berryFrost', 2]],
+    coffee: [['bean', 'bean', 6], ['cocoa', 'cocoa', 2], ['sponge', 'sponge', 1]],
   };
   function ingredients(key, ci) {
     const group = new THREE.Group(); scene.add(group);
@@ -131,7 +131,12 @@ function boot(section) {
         const depth = rnd(seed + 1);
         const side = n % 2 ? 1 : -1;
         mesh.userData = {
-          home: new THREE.Vector3(side * lerp(1.3, 4.8, rnd(seed + 2)), lerp(-3.8, 3.8, rnd(seed + 3)), lerp(-6, 2.6, depth)),
+          home: (() => {
+            const hx = side * lerp(2.4, 5.2, rnd(seed + 2));
+            let hy = lerp(-3.6, 3.6, rnd(seed + 3));
+            if (hx < 0 && hy < 0.4) hy = -hy + 0.8;            // the copy lives bottom left
+            return new THREE.Vector3(hx, hy, lerp(-6, 1.8, depth));
+          })(),
           depth, size: lerp(0.6, 1.5, rnd(seed + 4)) * lerp(0.75, 1.25, depth),
           spin: new THREE.Vector3(rnd(seed + 5) - 0.5, rnd(seed + 6) - 0.5, rnd(seed + 7) - 0.5).multiplyScalar(2.2),
           phase: rnd(seed + 8) * 6.28,
@@ -142,41 +147,23 @@ function boot(section) {
     return { group, bits };
   }
 
-  /* ---------- the box for the ending ---------- */
-  function wordmarkTexture() {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 640;
-    const g = c.getContext('2d');
-    g.fillStyle = '#ece3d3'; g.fillRect(0, 0, c.width, c.height);
-    const img = g.getImageData(0, 0, c.width, c.height);
-    for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - 0.5) * 8; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; }
-    g.putImageData(img, 0, 0);
-    g.fillStyle = '#304236'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = '700 190px DM, Arial, sans-serif'; try { g.letterSpacing = '-10px'; } catch (e) {}
-    g.fillText('normie.', 512, 300);
-    g.font = '400 34px DM, Arial, sans-serif'; try { g.letterSpacing = '6px'; } catch (e) {}
-    g.fillText('MATCHA · AÇAÍ · TIRAMISU COFFEE', 512, 450);
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
-  }
-  const box = new THREE.Group(); scene.add(box);
-  let boxFront;
-  {
-    const BW = 2.3, BH = 1.45, BD = 1.25;
-    const paper = new THREE.MeshStandardMaterial({ color: '#ece3d3', roughness: 0.9 });
-    const inside = new THREE.MeshStandardMaterial({ color: '#d8ccb6', roughness: 0.95, side: THREE.DoubleSide });
-    const front = boxFront = new THREE.MeshStandardMaterial({ map: wordmarkTexture(), roughness: 0.9 });
-    const wall = (w, h, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.03), mat);
-    const f = wall(BW, BH, [paper, paper, paper, paper, front, inside]); f.position.set(0, 0, BD / 2);
-    const b = wall(BW, BH, [paper, paper, paper, paper, inside, paper]); b.position.set(0, 0, -BD / 2);
-    const l = wall(BD, BH, [paper, paper, paper, paper, inside, paper]); l.rotation.y = Math.PI / 2; l.position.set(-BW / 2, 0, 0);
-    const r = wall(BD, BH, [paper, paper, paper, paper, paper, inside]); r.rotation.y = Math.PI / 2; r.position.set(BW / 2, 0, 0);
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(BW, 0.03, BD), inside); floor.position.y = -BH / 2;
-    const lid = new THREE.Group(); lid.position.set(0, BH / 2, -BD / 2);
-    const lidPanel = new THREE.Mesh(new THREE.BoxGeometry(BW, 0.03, BD), [paper, paper, inside, paper, paper, paper]); lidPanel.position.z = BD / 2;
-    lid.add(lidPanel); lid.rotation.x = -1.9;
-    box.add(f, b, l, r, floor, lid);
-    box.userData = { BW, BH, BD };
-  }
-  const boxSticks = ORDER.concat(ORDER).map(k => { const s = makePacket(k); s.scale.setScalar(0.62); box.add(s); return s; });
+  /* ---------- the pouches for the ending (the real packaging photos on cards) ---------- */
+  const ROOT = new URL('./', import.meta.url).href;
+  const loader = new THREE.TextureLoader();
+  const SIZE = { matcha: [876, 1256], acai: [876, 1290], coffee: [876, 1256] };
+  const PH = 3.1;
+  const pouches = ORDER.map(k => {
+    const tex = loader.load(`${ROOT}assets/pouch-${k}.webp`, () => draw());
+    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const [w, h] = SIZE[k];
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(PH * w / h, PH), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, depthWrite: false, fog: false }));
+    scene.add(m); return m;
+  });
+  // soft floor shadow under each pouch
+  const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(90,70,45,.35)'); r.addColorStop(1, 'rgba(90,70,45,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+  const shadows = ORDER.map(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, fog: false })); scene.add(m); return m; });
+  // sticks that drop into the front pouch, behind its clear film
+  const dropSticks = ['matcha', 'matcha', 'matcha'].map(k => { const st = makePacket(k); st.scale.setScalar(0.5); scene.add(st); return st; });
 
   /* ---------- the cast ---------- */
   const solo = hanger('matcha');
@@ -188,7 +175,6 @@ function boot(section) {
   const copies = $$('[data-copy]');
   const cards = $$('.story-post');
   const dots = $$('.story-dots i');
-  const receipt = $('.story-receipt');
   const hint = $('.story-hint');
 
   let W = 0, H = 0, aspect = 1;
@@ -252,15 +238,15 @@ function boot(section) {
     // ----- 2. three sticks on strings over the wordmark -----
     {
       const vis = x > 0.45 && x < 1.75;
-      const spread = narrow ? Math.min(1.05, halfW * 0.5) : Math.min(1.7, halfW * 0.3);
-      const tilts = [-0.22, 0.05, 0.26], heights = [0.35, 0.05, 0.25], delays = [0, 0.1, 0.05];
+      const spread = narrow ? Math.min(1.0, halfW * 0.5) : Math.min(2.3, halfW * 0.36);
+      const tilts = [-0.12, 0.03, 0.14], heights = [0.55, 0.3, 0.45], delays = [0, 0.1, 0.05];
       trio.forEach((h, i) => {
         h.rig.visible = vis;
         if (!vis) return;
         const enter = smooth(seg(x, 0.6 + delays[i], 0.95 + delays[i]));
         const leave = smooth(seg(x, 1.3 + delays[i] * 0.5, 1.6 + delays[i] * 0.5));
         const settle = clamp(x - 0.6 - delays[i]);
-        hang(h, (i - 1) * spread, heights[i] + (1 - enter) * 5 + leave * 6,
+        hang(h, (i - 1) * spread, heights[i] - (narrow ? 0.9 : 0.25) + (1 - enter) * 5 + leave * 6,
           pendulum(settle * 2, 0.07, 11, 3) + Math.sin(t * 0.7 + i) * 0.008,
           lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5));
       });
@@ -289,41 +275,52 @@ function boot(section) {
       const card = cards[i];
       if (card) {
         const [sx, sy] = toScreen(stageX, -0.05);
+        const [, st] = toScreen(stageX, -0.05 + TOP), [, sb] = toScreen(stageX, -0.05 - TOP);
+        const mediaH = (sb - st) * 1.12, mediaW = mediaH * 0.72;
+        card.style.setProperty('--media-w', `${mediaW.toFixed(0)}px`);
+        card.style.setProperty('--media-h', `${mediaH.toFixed(0)}px`);
         const o = clamp(Math.min(seg(u, 0.02, 0.2), 1 - seg(u, 0.78, 0.95)));
         card.style.left = `${sx.toFixed(1)}px`; card.style.top = `${sy.toFixed(1)}px`;
         card.style.opacity = o.toFixed(3); card.style.visibility = o > 0.01 ? 'visible' : 'hidden';
-        card.style.transform = `translate(-50%, -50%) translateY(${((1 - o) * 24).toFixed(1)}px) rotate(${(-1.5 + o * 1.5).toFixed(2)}deg)`;
+        card.style.transform = `translate(-50%, calc(-1 * var(--media-top, 56px) - var(--media-h) / 2)) translateY(${((1 - o) * 24).toFixed(1)}px)`;
       }
     });
     if (!chapters.some(c => c.h.rig.visible)) cards.forEach(c => { c.style.visibility = 'hidden'; c.style.opacity = 0; });
     setFlavor(flavor);
 
-    // ----- 4. it's in the box -----
+    // ----- 4. it's in the pouch: three pouches settle into a calm arc, sticks drop into the front one -----
     {
-      const u = x - T.end;                                  // 0..~1.15
-      const vis = u > -0.25;
-      box.visible = vis;
-      if (vis) {
-        const enter = smooth(seg(u, -0.25, 0.15));
-        const bx = narrow ? 0 : Math.min(1.5, halfW * 0.3);
-        box.position.set(bx, (narrow ? 0.2 : -1.15) - (1 - enter) * 4, -0.5);
-        box.rotation.set(0.32, -0.42 + Math.sin(t * 0.3) * 0.02, 0);
-        box.scale.setScalar(narrow ? 1.1 : 1);
-        const { BH } = box.userData;
-        boxSticks.forEach((s, i) => {
-          const d = smooth(seg(u, 0.18 + i * 0.07, 0.42 + i * 0.07));
-          const col = i % 3, row = Math.floor(i / 3);
-          s.position.set((col - 1) * 0.5 + (row ? 0.22 : -0.1), lerp(4.5, -BH / 2 + 0.62 + row * 0.05, d), (row ? -0.18 : 0.2));
-          s.rotation.set(0, (col - 1) * 0.15 + (row ? 0.4 : -0.2), (1 - d) * (i % 2 ? 0.5 : -0.5) + (col - 1) * 0.06);
-          s.visible = d > 0.001;
-        });
-      }
-      if (receipt) {
-        const o = smooth(seg(u, 0.35, 0.7));
-        receipt.style.opacity = Math.min(1, o * 1.6).toFixed(3);
-        receipt.style.visibility = o > 0.005 ? 'visible' : 'hidden';
-        receipt.style.transform = `translateY(${lerp(-110, 0, o).toFixed(1)}%) rotate(${lerp(-4, -2, o).toFixed(2)}deg)`;
-      }
+      const u = x - T.end;
+      const vis = u > -0.3;
+      const cx = narrow ? 0 : Math.min(1.9, halfW * 0.34);
+      const lay = narrow
+        ? [[-0.95, 1.15, -2.2, 0.32, 0.8], [0, 0.85, 0, 0, 1], [0.95, 1.15, -2.2, -0.32, 0.8]]
+        : [[-1.75, -0.15, -2.4, 0.3, 0.86], [0, -0.35, 0, 0, 1], [1.75, -0.15, -2.4, -0.3, 0.86]];
+      const order = [1, 0, 2];                               // matcha front and center, açaí left, tiramisu coffee right
+      pouches.forEach((m, i) => {
+        m.visible = shadows[i].visible = vis;
+        if (!vis) return;
+        const [lx, ly, lz, ry, sc] = lay[order[i]];
+        const d = smooth(seg(u, -0.3 + (order[i] === 1 ? 0 : 0.12), 0.2 + (order[i] === 1 ? 0 : 0.12)));
+        const bob = Math.sin(t * 0.6 + i * 1.7) * 0.02;
+        m.position.set(cx + lx * (narrow ? 1 : 1), ly - (1 - d) * 5 + bob, lz);
+        m.rotation.set(0, ry + Math.sin(t * 0.35 + i) * 0.015, 0);
+        m.scale.setScalar(sc * (narrow ? 0.78 : 1));
+        m.renderOrder = order[i] === 1 ? 3 : 1;
+        const sh = shadows[i];
+        sh.position.set(m.position.x, ly - PH / 2 * sc * (narrow ? 0.78 : 1) + 0.02, lz + 0.05);
+        sh.rotation.x = -Math.PI / 2; sh.scale.set(2.4 * sc, 0.7 * sc, 1);
+        sh.material.opacity = d;
+      });
+      const front = pouches[0];
+      dropSticks.forEach((st, i) => {
+        const d = seg(u, 0.3 + i * 0.12, 0.55 + i * 0.12);
+        st.visible = vis && d > 0 && d < 1;
+        if (!st.visible) return;
+        const k = d * d;
+        st.position.set(front.position.x + (i - 1) * 0.32, lerp(4.2, front.position.y + 0.1, k), front.position.z - 0.12);
+        st.rotation.set(0, 0.2 * (i - 1), (1 - k) * (i % 2 ? 0.35 : -0.35));
+      });
     }
 
     // ----- page copy -----
@@ -368,6 +365,6 @@ function boot(section) {
   }).observe(section);
   addEventListener('resize', resize);
   addEventListener('scroll', () => { if (performance.now() - lastDraw > 60) draw(); }, { passive: true });   // keep frames in sync even if animation frames are throttled
-  (document.fonts ? document.fonts.load('700 190px DM').then(() => document.fonts.ready) : Promise.resolve()).then(() => { boxFront.map.dispose(); boxFront.map = wordmarkTexture(); boxFront.needsUpdate = true; resize(); section.classList.add('story-ready'); });
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { resize(); section.classList.add('story-ready'); });
   resize();
 }
