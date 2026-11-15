@@ -772,3 +772,17 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
  .story-copy[data-copy=acai] .story-lead{margin-left:auto}
  .story-copy[data-copy=acai] .story-ctas{justify-content:flex-end}
 }
+
+/* post icons pop in one after another when the card lands; the heart then gets liked */
+.post-actions svg{transform:scale(0);transform-origin:50% 60%;opacity:0}
+.story-post.is-in .post-actions svg{animation:post-pop .55s cubic-bezier(.34,1.7,.5,1) both}
+.story-post.is-in .post-actions svg:nth-child(1){animation-delay:.12s}
+.story-post.is-in .post-actions svg:nth-child(2){animation-delay:.22s}
+.story-post.is-in .post-actions svg:nth-child(3){animation-delay:.32s}
+.story-post.is-in .post-actions svg:nth-child(4){animation-delay:.42s}
+.story-post.is-in .post-actions svg:nth-child(1) path{animation:post-like .5s .75s ease-out both}
+.story-post.is-in .post-actions svg:nth-child(1){animation:post-pop .55s .12s cubic-bezier(.34,1.7,.5,1) both,post-beat .45s .75s cubic-bezier(.34,1.8,.5,1)}
+@keyframes post-pop{0%{transform:scale(0) rotate(-12deg);opacity:0}60%{transform:scale(1.28) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes post-beat{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes post-like{from{fill:transparent}to{fill:var(--f-ink,currentColor)}}
+@media (prefers-reduced-motion:reduce){.post-actions svg{transform:none;opacity:1}.story-post.is-in .post-actions svg,.story-post.is-in .post-actions svg path{animation:none}}
