@@ -93,7 +93,7 @@ function boot(section) {
     if (target >= .999) { try { localStorage.setItem('normie-intro-seen', '1'); } catch (e) {} }
   }
   addEventListener('scroll', measure, { passive: true });
-  $('.intro-skip').addEventListener('click', () => { track('intro_skip', String(Math.round(target * 100))); scrollTo({ top: section.getBoundingClientRect().top + scrollY + section.offsetHeight, behavior: 'auto' }); });
+  $('.intro-skip')?.addEventListener('click', () => { track('intro_skip', String(Math.round(target * 100))); scrollTo({ top: section.getBoundingClientRect().top + scrollY + section.offsetHeight, behavior: 'auto' }); });
 
   /* ---------- timeline ---------- */
   const FOCUS = [['matcha', .56, .67], ['acai', .67, .78], ['coffee', .78, .89]];
