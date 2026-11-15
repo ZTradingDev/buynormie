@@ -6,7 +6,7 @@
 //  4. "it's in the pouch.": a clear zip pouch opens, twelve sticks drop in, it zips shut
 // Every frame is a pure function of scroll progress (plus a tiny idle sway), so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
-import { FLAVORS, ORDER, makePacket, BODY_H, CAP_H } from './packets3d.js?v=20261115b';
+import { FLAVORS, ORDER, makePacket, BODY_H, CAP_H, W as STICK_W } from './packets3d.js?v=20261115b';
 import { RoomEnvironment } from './vendor/three-addons/environments/RoomEnvironment.js';
 
 const section = document.querySelector('[data-story]');
@@ -72,6 +72,37 @@ function boot(section) {
     h.string.scale.y = Math.max(0.01, L - TOP * sc);
   }
   const pendulum = (u, amp, freq, damp) => amp * Math.exp(-damp * u) * Math.sin(u * freq);
+  // three hanging sticks that swing and collide (equal mass, slightly lossy hits). Stepped forward
+  // from SIM_X0 by scroll, so any scroll position always gives the same frame.
+  const SIM_X0 = 1.08, SIM_K = 22, SIM_DT = 1 / 240, MASS = [1, 1.6, 1.6];
+  const sim = { key: '', x: 0, th: [0, 0, 0], w: [0, 0, 0] };
+  function trioSim(x, px, L, dmin, pull) {
+    if (x <= SIM_X0) return [0, 0, 0];
+    const key = px.map(v => v.toFixed(3)).join() + L.map(v => v.toFixed(3)).join() + pull.toFixed(4);
+    if (sim.key !== key || x < sim.x) { sim.key = key; sim.x = SIM_X0; sim.th = [pull, 0, 0]; sim.w = [0, 0, 0]; }
+    const { th, w } = sim, e = 0.82, g = 9.8, damp = 0.08;
+    const steps = Math.min(12000, Math.floor((x - sim.x) * SIM_K / SIM_DT));
+    for (let n = 0; n < steps; n++) {
+      for (let i = 0; i < 3; i++) { w[i] += (-(g / L[i]) * Math.sin(th[i]) - damp * w[i]) * SIM_DT; th[i] += w[i] * SIM_DT; }
+      for (let i = 0; i < 2; i++) {
+        const j = i + 1;
+        const ci = px[i] + L[i] * Math.sin(th[i]), cj = px[j] + L[j] * Math.sin(th[j]);
+        const gap = cj - ci;
+        if (gap >= dmin) continue;
+        const ki = L[i] * Math.cos(th[i]), kj = L[j] * Math.cos(th[j]);
+        const vi = ki * w[i], vj = kj * w[j];
+        if (vi > vj) {                                    // closing: bounce
+          const mi = MASS[i], mj = MASS[j], p = mi * vi + mj * vj;
+          w[i] = (p - mj * e * (vi - vj)) / (mi + mj) / ki;   // the lighter striker recoils
+          w[j] = (p + mi * e * (vi - vj)) / (mi + mj) / kj;
+        }
+        const o = (dmin - gap) / 2;                       // never let them overlap
+        th[i] -= o / ki; th[j] += o / kj;
+      }
+    }
+    sim.x += steps * SIM_DT / SIM_K;
+    return th.slice();
+  }
 
   /* ---------- ingredients (modelled, so they share the sticks' light) ---------- */
   function lumpy(geo, amt, seed) {
@@ -322,25 +353,33 @@ function boot(section) {
       const vis = x > 0.45 && x < 1.75;
       const spread = narrow ? Math.min(1.05, halfW * 0.56) : Math.min(2.2, halfW * 0.3);
       const tilts = [-0.1, 0.02, 0.11], heights = [0.05, -0.15, 0.0], delays = [0, 0.1, 0.05];
-      const carry = smooth(seg(x, 1.22, 1.5));              // matcha travels into its chapter instead of cutting
+      const carry = smooth(seg(x, 1.3, 1.5));               // matcha travels into its chapter instead of cutting
+      const sc = narrow ? 1.0 : 1.05, off = narrow ? 0 : 0.35, drop = narrow ? 0.1 : 0.35;
+      const px = [0, 1, 2].map(i => (i - 1) * spread + off), py = heights.map(h => h - drop);
+      const L = py.map(y => PIVOT - y), dmin = STICK_W * S * sc * 1.04;
+      // matcha is drawn back, let go, and strikes açaí, which knocks into tiramisu: a real pendulum sim
+      const pull = -Math.min(0.42, Math.asin(Math.min(0.9, (px[1] - px[0] - dmin + 0.55) / L[0])));
+      const th = trioSim(x, px, L, dmin, pull);
+      const windup = pull * smooth(seg(x, 0.95, SIM_X0));
       trio.forEach((h, i) => {
         h.rig.visible = vis && !(i === 0 && x >= 1.5);
         if (!h.rig.visible) return;
-        if (i === 0 && carry > 0) {
-          const sx0 = (0 - 1) * spread + (narrow ? 0 : 0.35), sy0 = heights[0] - (narrow ? 0.1 : 0.35);
+        const idle = Math.sin(t * 0.7 + i) * 0.008;
+        if (i === 0) {
+          const swing = x < SIM_X0 ? windup : th[0];
           const tx = chapterX(0), ty = -0.05;
-          hang(h, lerp(sx0, tx, carry), lerp(sy0, ty, carry), Math.sin(t * 0.7) * 0.008 * (1 - carry),
-            lerp(lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))), -0.444, carry), tilts[0] * (1 - carry), lerp(narrow ? 1.0 : 1.05, 0.8, carry));
+          hang(h, lerp(px[0], tx, carry), lerp(py[0], ty, carry), lerp(swing + idle, 0, carry),
+            lerp(lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))), -0.444, carry), tilts[0] * (1 - carry), lerp(sc, 0.8, carry));
           h.string.material = carry > 0.55 ? hiddenString : stringMat;
           return;
         }
         h.string.material = stringMat;
         const enter = smooth(seg(x, 0.6 + delays[i], 0.95 + delays[i]));
-        const leave = smooth(seg(x, 1.3 + delays[i] * 0.5, 1.6 + delays[i] * 0.5));
+        const leave = smooth(seg(x, 1.2 + delays[i] * 0.5, 1.45 + delays[i] * 0.5));
         const settle = clamp(x - 0.6 - delays[i]);
-        hang(h, (i - 1) * spread + (narrow ? 0 : 0.35), heights[i] - (narrow ? 0.1 : 0.35) + (1 - enter) * 5 + leave * 6,
-          pendulum(settle * 2, 0.07, 11, 3) + Math.sin(t * 0.7 + i) * 0.008,
-          lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5), narrow ? 1.0 : 1.05);
+        hang(h, px[i], py[i] + (1 - enter) * 5 + leave * 6,
+          pendulum(settle * 2, 0.07, 11, 3) + idle + th[i],
+          lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5), sc);
       });
     }
     // ----- 3. the flavor chapters -----
