@@ -1,6 +1,6 @@
-import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261115a';
-import { card, esc, image, productInfo, roll } from './components.js?v=20261115a';
-import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261115a';
+import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261115b';
+import { card, esc, image, productInfo, roll } from './components.js?v=20261115b';
+import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261115b';
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const html = document.documentElement;
