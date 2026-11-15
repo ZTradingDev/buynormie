@@ -47,6 +47,31 @@ Object.defineProperty(box, 'size', { get: () => pack().size, enumerable: false }
 const picked = () => FLAVORS.reduce((a, k) => a + box.mix[k], 0);
 const mixText = () => FLAVORS.filter(k => box.mix[k] > 0).map(k => `${box.mix[k]} ${NAMES[k]}`).join(', ') || 'no sticks yet';
 const packText = () => `${pack().label} · ${mixText()}`;
+// ---------- slot model ----------
+// The tray keeps each stick in its place. Taking one away empties a slot of that same flavor
+// (the one tapped, or the last of that flavor); adding one fills the first empty slot.
+let slotLayout = [], lastFilled = -1, lastCleared = -1, clearAt = -1;
+function sortedSlots(size) { const c = []; FLAVORS.forEach(k => { for (let i = 0; i < box.mix[k]; i++) c.push(k); }); while (c.length < size) c.push(null); return c; }
+function reconcileSlots(size) {
+  lastFilled = -1; lastCleared = -1;
+  if (slotLayout.length !== size || pack().fixed) { slotLayout = sortedSlots(size); clearAt = -1; return slotLayout.slice(); }
+  FLAVORS.forEach(k => {
+    let have = slotLayout.filter(c => c === k).length;
+    while (have > box.mix[k]) {
+      let i = clearAt >= 0 && slotLayout[clearAt] === k ? clearAt : slotLayout.lastIndexOf(k);
+      slotLayout[i] = null; lastCleared = i; clearAt = -1; have--;
+    }
+    while (have < box.mix[k]) {
+      // the empty slot nearest this flavor's other sticks, so colors stay together
+      const empties = slotLayout.map((c, j) => c === null ? j : -1).filter(j => j >= 0); if (!empties.length) break;
+      const mine = slotLayout.map((c, j) => c === k ? j : -1).filter(j => j >= 0);
+      const i = mine.length ? empties.reduce((best, j) => Math.min(...mine.map(m => Math.abs(m - j))) < Math.min(...mine.map(m => Math.abs(m - best))) ? j : best, empties[0]) : empties[0];
+      slotLayout[i] = k; lastFilled = i; have++;
+    }
+  });
+  return slotLayout.slice();
+}
+const resetSlots = () => { slotLayout = []; };
 function renderBox() {
   const P = pack(), n = picked(), left = P.size - n, fixed = Boolean(P.fixed);
   $$('[data-pack]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.pack === box.pack)));
@@ -84,21 +109,21 @@ function renderBox() {
   // slot view: one cell per stick
   const slots = $('[data-box-slots]');
   if (slots) {
-    const cells = [];
-    FLAVORS.forEach(k => { for (let i = 0; i < box.mix[k]; i++) cells.push(k); });
-    while (cells.length < P.size) cells.push(null);
+    const cells = reconcileSlots(P.size);
     slots.className = `box-slots size-${P.size}`;
     slots.replaceChildren(...cells.map((k, i) => {
       const li = document.createElement('li');
+      li.dataset.index = String(i);
       if (k) {
         li.className = `slot slot-${k}`;
+        if (i === lastFilled) li.dataset.new = '1';
         if (fixed) li.innerHTML = `<span class="sr-only">${NAMES[k]}</span>`;
         else {
-          const b = document.createElement('button'); b.type = 'button'; b.dataset.removeStick = k;
+          const b = document.createElement('button'); b.type = 'button'; b.dataset.removeStick = k; b.dataset.slot = String(i);
           b.setAttribute('aria-label', `Remove one ${NAMES[k]} stick`); b.title = `${NAMES[k]} · tap to remove`;
           li.appendChild(b);
         }
-      } else { li.className = 'slot slot-empty'; li.innerHTML = '<span class="sr-only">empty</span>'; }
+      } else { li.className = 'slot slot-empty' + (i === lastCleared ? ' slot-cleared' : ''); li.innerHTML = '<span class="sr-only">empty</span>'; }
       return li;
     }));
   }
@@ -111,9 +136,9 @@ function renderBox() {
 }
 $$('[data-pack]').forEach(b => b.addEventListener('click', () => {
   const k = b.dataset.pack; if (k === box.pack || !PACKS[k]) return;
-  box.pack = k; box.mix = PACKS[k].fixed ? { ...PACKS[k].fixed } : even(PACKS[k].size); renderBox();
+  box.pack = k; box.mix = PACKS[k].fixed ? { ...PACKS[k].fixed } : even(PACKS[k].size); resetSlots(); renderBox();
 }));
-$('[data-mix-even]')?.addEventListener('click', () => { if (pack().fixed) return; box.mix = even(box.size); renderBox(); });
+$('[data-mix-even]')?.addEventListener('click', () => { if (pack().fixed) return; box.mix = even(box.size); resetSlots(); renderBox(); });
 $$('.order-row[data-flavor]').forEach(r => $$('[data-step]', r).forEach(b => b.addEventListener('click', () => {
   if (pack().fixed) return;
   const k = r.dataset.flavor, d = Number(b.dataset.step);
@@ -122,7 +147,7 @@ $$('.order-row[data-flavor]').forEach(r => $$('[data-step]', r).forEach(b => b.a
 })));
 $('[data-box-slots]')?.addEventListener('click', e => {
   const t = e.target.closest('[data-remove-stick]'); if (!t || pack().fixed) return;
-  const k = t.dataset.removeStick; if (box.mix[k] > 0) { box.mix[k]--; renderBox(); }
+  const k = t.dataset.removeStick; if (box.mix[k] > 0) { clearAt = Number(t.dataset.slot); box.mix[k]--; renderBox(); }
 });
 renderBox();
 

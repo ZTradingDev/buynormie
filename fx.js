@@ -9,7 +9,7 @@ if (!reduced) document.addEventListener('click', e => {
   const k = btn.closest('[data-flavor]')?.dataset.flavor;
   requestAnimationFrame(() => {
     const slots = document.querySelectorAll(`[data-box-slots] .slot-${k}`);
-    const slot = slots[slots.length - 1];
+    const slot = document.querySelector(`[data-box-slots] .slot-${k}[data-new]`) || slots[slots.length - 1];
     if (!slot) return;
     const a = btn.getBoundingClientRect(), b = slot.getBoundingClientRect();
     const img = new Image(); img.src = `${ROOT}assets/stick-${k}.webp`; img.alt = ''; img.className = 'fly-stick';
