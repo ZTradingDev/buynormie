@@ -1,11 +1,11 @@
-import { flavors } from './flavors.js?v=20261113b';
+import { flavors } from './flavors.js?v=20261115a';
 export const ROOT = new URL('./', import.meta.url).href;
 
 // Edit brand, products, integrations, and motion here. Rebuild HTML with npm run build.
 export const brand = {
   name: 'normie.',
   tagline: 'a little ritual. all yours.',
-  description: 'normie drink sticks: matcha, açaí + collagen, and tiramisu coffee. Build a 6- or 12-pack your way and reserve your first box.',
+  description: 'normie drink sticks: matcha, açaí, and tiramisu coffee. Build a 6- or 12-pack your way and reserve your first box.',
   announcement: 'first boxes are coming',
   status: 'prelaunch',
   packCount: 12,
@@ -41,7 +41,7 @@ export const motion = {
 };
 const presentation = {
   matcha: { color: '#dce3ce', ink: '#354b3d', noteShort: 'earthy. green. unmistakably matcha.', category: 'tea', descriptor: 'matcha drink sticks', mood: 'a green kind of morning.', hero: 'A familiar green ritual, made your own.', lead: 'Real matcha with L-theanine and American ginseng, in one stick.', caffeine: 'Contains naturally occurring caffeine from matcha.', caffeineMg: null, benefit: 'Calm, focused energy without the coffee crash.', directions: ['Tear open one stick and pour it into 8 oz (240 ml) of cold water or milk.', 'Stir or shake for 15 seconds, then add ice.', 'Prefer it hot? Whisk into 8 oz of hot (not boiling) water or steamed milk.'], allergens: 'No major food allergens in the current formula.', order: 0 },
-  acai: { color: '#ead8d9', ink: '#674a51', noteShort: 'berry-forward. a little different.', category: 'fruit', descriptor: 'açaí + collagen drink sticks', mood: 'your berry little moment.', hero: 'A berry ritual with a little more to it.', lead: 'Açaí with collagen peptides, vitamin C, and electrolytes, in one stick.', caffeine: 'Made without caffeine ingredients.', caffeineMg: 0, benefit: 'Hydration and skin support, with no caffeine ingredients.', directions: ['Tear open one stick and pour it into 12 oz (355 ml) of cold water or milk.', 'Shake or stir well for 20 seconds, then add ice.', 'Best served cold.'], allergens: 'Contains: wheat. Contains bovine collagen; not vegan.', order: 1 },
+  acai: { color: '#ead8d9', ink: '#674a51', noteShort: 'berry-forward. a little different.', category: 'fruit', descriptor: 'açaí drink sticks', mood: 'your berry little moment.', hero: 'A berry ritual with a little more to it.', lead: 'Açaí with collagen peptides, vitamin C, and electrolytes, in one stick.', caffeine: 'Made without caffeine ingredients.', caffeineMg: 0, benefit: 'Hydration and skin support, with no caffeine ingredients.', directions: ['Tear open one stick and pour it into 12 oz (355 ml) of cold water or milk.', 'Shake or stir well for 20 seconds, then add ice.', 'Best served cold.'], allergens: 'Contains: wheat. Contains bovine collagen; not vegan.', order: 1 },
   coffee: { color: '#e4d7c7', ink: '#634f3d', noteShort: 'coffee first. always.', category: 'coffee', descriptor: 'tiramisu coffee drink sticks', mood: 'for your morning, whenever it starts.', hero: 'Something familiar. A new daily ritual.', lead: 'Real coffee with citicoline, galangal, and saffron extracts, in one stick.', caffeine: 'Contains caffeine from coffee.', caffeineMg: null, benefit: 'Your morning coffee, with focus support built in.', directions: ['Tear open one stick and pour it into 8 oz (240 ml) of cold water or milk.', 'Stir or shake for 15 seconds, then add ice.', 'Prefer it hot? Stir into 8 oz of hot water or steamed milk.'], allergens: 'No major food allergens in the current formula.', order: 2 },
 };
 export const products = Object.entries(flavors).map(([id, formula]) => ({

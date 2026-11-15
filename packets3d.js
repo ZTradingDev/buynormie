@@ -9,7 +9,6 @@ export const FLAVORS = {
 export const ORDER = ['matcha', 'acai', 'coffee'];
 
 /* ---------- textures ---------- */
-const NOTE = { matcha: 'with L-theanine', acai: '+ collagen', coffee: 'with citicoline' };
 const NUM = { matcha: '01', acai: '02', coffee: '03' };
 function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);

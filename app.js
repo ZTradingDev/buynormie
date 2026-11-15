@@ -1,6 +1,6 @@
-import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261113b';
-import { card, esc, image, productInfo, roll } from './components.js?v=20261113b';
-import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261113b';
+import { brand, products, findProduct, motion, ROOT } from './config.js?v=20261115a';
+import { card, esc, image, productInfo, roll } from './components.js?v=20261115a';
+import { rpc, subscribe, track, waitlistCount, validEmail } from './api.js?v=20261115a';
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const html = document.documentElement;
@@ -186,10 +186,10 @@ dialog.addEventListener('keydown',e=>{if(e.key==='Tab'){const focusable=$$('a[hr
 // Collection filters keep controls/focus stable while cards update.
 let filter='all',sort='featured',collectionQuery='',filterTimer;
 function updateCollection(){const grid=$('#product-grid');if(!grid)return;const list=products.filter(p=>(filter==='all'||p.category===filter)&&`${p.name} ${p.descriptor}`.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(collectionQuery)).sort((a,b)=>sort==='az'?a.name.localeCompare(b.name):sort==='za'?b.name.localeCompare(a.name):a.order-b.order);grid.classList.add('results-loading');grid.setAttribute('aria-busy','true');clearTimeout(filterTimer);
- $$('[data-filter]').forEach(btn=>{const active=btn.dataset.filter===filter;btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));});$('#filter-chips').innerHTML=filter==='all'?'':`<button class="filter-chip" data-filter="all" aria-label="Remove ${esc(filter)} filter">${filter==='fruit'?'fruit + collagen':esc(filter)} ×</button>`;
+ $$('[data-filter]').forEach(btn=>{const active=btn.dataset.filter===filter;btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));});$('#filter-chips').innerHTML=filter==='all'?'':`<button class="filter-chip" data-filter="all" aria-label="Remove ${esc(filter)} filter">${esc(filter)} ×</button>`;
  filterTimer=setTimeout(()=>{grid.innerHTML=list.map(card).join('');$('#collection-empty').hidden=!!list.length;$('#result-count').textContent=`${list.length} ${list.length===1?'flavor':'flavors'}`;grid.classList.remove('results-loading');grid.removeAttribute('aria-busy');bindImages(grid);},reduced?0:80);
 }
-function openFilters(){openOverlay('filters','your kind of flavor.',`<fieldset class="filter-drawer"><legend class="sr-only">Choose a flavor category</legend>${[['all','all flavors'],['tea','matcha'],['fruit','açaí + collagen'],['coffee','tiramisu coffee']].map(([v,n])=>`<label><input type="radio" name="flavor-filter" value="${v}" ${filter===v?'checked':''}>${n}</label>`).join('')}</fieldset><div class="filter-actions"><button class="button" data-apply-filters>show flavors ↗</button><button class="text-link" data-reset-filters>reset</button></div>`);}
+function openFilters(){openOverlay('filters','your kind of flavor.',`<fieldset class="filter-drawer"><legend class="sr-only">Choose a flavor category</legend>${[['all','all flavors'],['tea','matcha'],['fruit','açaí'],['coffee','tiramisu coffee']].map(([v,n])=>`<label><input type="radio" name="flavor-filter" value="${v}" ${filter===v?'checked':''}>${n}</label>`).join('')}</fieldset><div class="filter-actions"><button class="button" data-apply-filters>show flavors ↗</button><button class="text-link" data-reset-filters>reset</button></div>`);}
 document.addEventListener('click',e=>{const btn=e.target.closest('button');if(!btn)return;if(btn.hasAttribute('data-filter')){filter=btn.dataset.filter;if(btn.closest('#collection-empty')){collectionQuery='';$('#collection-search').value='';}updateCollection();}if(btn.hasAttribute('data-apply-filters')){filter=$('input[name=flavor-filter]:checked',dialog).value;updateCollection();closeOverlay();}if(btn.hasAttribute('data-reset-filters')){$('input[value=all]',dialog).checked=true;}});
 $('#collection-search')?.addEventListener('input',e=>{collectionQuery=e.target.value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();updateCollection();});
 $('#sort')?.addEventListener('change',e=>{sort=e.target.value;updateCollection();});

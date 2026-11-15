@@ -1,8 +1,8 @@
 // Accounts (passwordless email sign-in), email list, rewards and Stripe checkout.
 // Backend: Supabase (auth + database with Row Level Security) and Stripe (via Supabase Edge Functions).
 // Until supabaseUrl and supabaseAnonKey are set in config.js, everything runs in preview mode and sends nothing.
-import { brand } from './config.js?v=20261113b';
-import { reserveBox, track } from './api.js?v=20261113b';
+import { brand } from './config.js?v=20261115a';
+import { reserveBox, track } from './api.js?v=20261115a';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -332,9 +332,27 @@ if (pop && typeof pop.showModal === 'function') {
   pop.addEventListener('close', () => { try { sessionStorage.setItem('normie-rewards-pop', 'closed'); } catch (e) {} video?.pause(); });
   $$('[data-pop-close]', pop).forEach(b => b.addEventListener('click', close));
   pop.addEventListener('click', e => { if (e.target === pop) close(); });
-  setTimeout(() => {
-    if (dismissed || session || location.hash === '#account' || params.has('checkout') || document.querySelector('dialog[open]')) return;
+  // Show once the visitor has seen the product: after they use the box builder, or once they scroll past it.
+  // Never on first paint, and at most once every 7 days.
+  let shownAt = 0;
+  try { shownAt = Number(localStorage.getItem('normie-rewards-pop-at')) || 0; } catch (e) {}
+  const recent = Date.now() - shownAt < 7 * 864e5;
+  let armed = !(dismissed || recent);
+  const open = () => {
+    if (!armed || session || location.hash === '#account' || params.has('checkout') || document.querySelector('dialog[open]')) return;
+    armed = false;
+    try { localStorage.setItem('normie-rewards-pop-at', String(Date.now())); } catch (e) {}
     pop.showModal();
     if (video && !matchMedia('(prefers-reduced-motion: reduce)').matches) video.play().catch(() => {});
-  }, 700);
+  };
+  if (armed) {
+    // past the box builder (the FAQ preview reaches the viewport) counts as having seen the product
+    const after = $('.faq-preview') || $('#rewards');
+    if (after) new IntersectionObserver((entries, io) => {
+      if (entries.some(e => e.isIntersecting)) { io.disconnect(); setTimeout(open, 600); }
+    }, { threshold: 0.2 }).observe(after);
+    $('#order')?.addEventListener('click', e => {
+      if (e.target.closest('[data-step], [data-pack], [data-mix-even]')) setTimeout(open, 2500);
+    });
+  }
 }
