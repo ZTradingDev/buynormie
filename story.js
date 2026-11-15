@@ -60,10 +60,10 @@ function boot(section) {
     return { rig, stick, string };
   }
   // place a hanger so the stick's center sits at (x, y); sway rotates around the pivot
-  function hang(h, x, y, sway, turn, tilt = 0, sc = 1) {
-    const L = PIVOT - y;
+  function hang(h, x, y, sway, turn, tilt = 0, sc = 1, pivot = PIVOT) {
+    const L = pivot - y;
     h.stick.scale.setScalar(S * sc);
-    h.rig.position.set(x, PIVOT, 0);
+    h.rig.position.set(x, pivot, 0);
     h.rig.rotation.z = sway;
     h.stick.position.set(0, -L, 0);
     h.stick.rotation.set(0.03, turn, tilt);
@@ -298,26 +298,29 @@ function boot(section) {
       const vis = x < 0.82;
       solo.rig.visible = vis;
       if (vis) {
-        const below = -halfH - TOP - 0.3;
-        const y = lerp(below, 0.15, rise) + leave * 6;
-        const swing = rise * (pendulum(u * 2.4 + 0.1, 0.16, 9, 2.2) + Math.sin(t * 1.1) * 0.03) + (1 - rise) * Math.sin(sinceLoad * 1.3) * 0.004;
-        hang(solo, 0, y, swing, rise * (u * Math.PI * 2.1) + Math.sin(t * 0.45) * 0.3 * rise);
+        // anchor: just under the "scroll" label, measured from the page so it lines up at any size
+        let anchor = -halfH * 0.45;
+        if (hint) { const r = hint.getBoundingClientRect(), cr = canvas.getBoundingClientRect(); anchor = (1 - 2 * ((r.bottom + 8 - cr.top) / H)) * halfH; }
+        const below = -halfH - TOP - 0.4;                      // the stick waits below the fold
+        const lift = (0.15 - below) * rise;                    // scrolling pulls the whole string up
+        const swing = rise * (pendulum(u * 2.4 + 0.1, 0.16, 9, 2.2) + Math.sin(t * 1.1) * 0.03) + (1 - rise) * Math.sin(sinceLoad * 1.3) * 0.003;
+        hang(solo, 0, below + lift + leave * 6, swing, rise * (u * Math.PI * 2.1) + Math.sin(t * 0.45) * 0.3 * rise, 0, 1, anchor + lift + leave * 6);
       }
     }
     // ----- 2. three sticks on strings over the wordmark -----
     {
       const vis = x > 0.45 && x < 1.75;
-      const spread = narrow ? Math.min(1.0, halfW * 0.5) : Math.min(2.3, halfW * 0.36);
-      const tilts = [-0.08, 0.02, 0.09], heights = [0.95, 0.8, 0.9], delays = [0, 0.1, 0.05];
+      const spread = narrow ? Math.min(1.05, halfW * 0.56) : Math.min(2.2, halfW * 0.3);
+      const tilts = [-0.1, 0.02, 0.11], heights = [0.05, -0.15, 0.0], delays = [0, 0.1, 0.05];
       trio.forEach((h, i) => {
         h.rig.visible = vis;
         if (!vis) return;
         const enter = smooth(seg(x, 0.6 + delays[i], 0.95 + delays[i]));
         const leave = smooth(seg(x, 1.3 + delays[i] * 0.5, 1.6 + delays[i] * 0.5));
         const settle = clamp(x - 0.6 - delays[i]);
-        hang(h, (i - 1) * spread, heights[i] + (narrow ? 0.35 : 0) + (1 - enter) * 5 + leave * 6,
+        hang(h, (i - 1) * spread + (narrow ? 0 : 0.35), heights[i] - (narrow ? 0.1 : 0.35) + (1 - enter) * 5 + leave * 6,
           pendulum(settle * 2, 0.07, 11, 3) + Math.sin(t * 0.7 + i) * 0.008,
-          lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5), 0.68);
+          lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5), narrow ? 1.0 : 1.05);
       });
     }
     // ----- 3. the flavor chapters -----
@@ -404,7 +407,7 @@ function boot(section) {
     words.forEach(w => {
       const k = w.dataset.word;
       let o = 0, s = 1, dy = 0;
-      if (k === 'normie') { o = 1 - seg(x, 1.35, 1.6); s = lerp(1, 1.06, smooth(seg(x, 0.9, 1.6))); dy = 0; const d = smooth(seg(x, 0.55, 0.9)); w.style.color = `rgb(${Math.round(lerp(139, 48, d))},${Math.round(lerp(141, 66, d))},${Math.round(lerp(125, 54, d))})`; w.style.top = lerp(50, narrow ? 74 : 76, smooth(seg(x, 0.4, 0.8))).toFixed(2) + '%'; }
+      if (k === 'normie') { o = 1 - smooth(seg(x, 0.3, 0.55)); s = lerp(1, 1.04, smooth(seg(x, 0.1, 0.55))); dy = 0; }   // the wordmark belongs to the landing screen only
       else {
         const i = ORDER.indexOf(k), u = x - (T.ch + i * T.chLen);
         o = clamp(Math.min(seg(u, -0.05, 0.15), 1 - seg(u, 0.85, 1.05))); s = lerp(1.06, 1, smooth(clamp(u * 2))); dy = (0.5 - u) * 8;
@@ -423,7 +426,7 @@ function boot(section) {
       else { const u = x - (T.ch + ORDER.indexOf(k) * T.chLen); o = clamp(Math.min(seg(u, -0.02, 0.1), 1 - seg(u, 0.88, 0.98))); }
       show(el, o);
     });
-    if (hint) hint.style.opacity = (1 - seg(x, 0.05, 0.3)).toFixed(3);
+    if (hint) hint.style.opacity = (1 - seg(x, 0.02, 0.12)).toFixed(3);
     section.style.setProperty('--story-dots', String(win(x, T.ch, T.end, 0.1)));
 
     renderer.render(scene, camera);
