@@ -37,6 +37,11 @@ try {
     else box.mix = even(P.size);
   }
 } catch (e) {}
+// arriving from a flavor chapter (?flavor=matcha): start a normie special that leans into that flavor
+{
+  const f = new URLSearchParams(location.search).get('flavor');
+  if (FLAVORS.includes(f)) { box.pack = 'special'; box.mix = { matcha: 3, acai: 3, coffee: 3 }; box.mix[f] = 6; }
+}
 const pack = () => PACKS[box.pack];
 Object.defineProperty(box, 'size', { get: () => pack().size, enumerable: false });
 const picked = () => FLAVORS.reduce((a, k) => a + box.mix[k], 0);
