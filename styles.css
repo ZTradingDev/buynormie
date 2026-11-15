@@ -760,3 +760,7 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 /* "scroll" sits at the very bottom of the screen, the string running down from it to the edge */
 .story-hint{top:auto!important;bottom:calc(64px + env(safe-area-inset-bottom))}
 @media(max-width:800px){.story-hint{bottom:calc(56px + env(safe-area-inset-bottom))}}
+
+/* a stick taken out leaves its slot empty in place */
+.slot-cleared{animation:slotClear 260ms var(--ease-out)}
+@keyframes slotClear{from{transform:scale(.85);background:rgb(48 66 54 / .08)}to{transform:none;background:transparent}}
