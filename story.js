@@ -365,6 +365,7 @@ function boot(section) {
     if (visible && !raf) raf = requestAnimationFrame(loop);
   }).observe(section);
   addEventListener('resize', resize);
+  addEventListener('scroll', () => { if (!raf) draw(); }, { passive: true });   // keep frames in sync even if animation frames are throttled
   (document.fonts ? document.fonts.load('700 190px DM').then(() => document.fonts.ready) : Promise.resolve()).then(() => { boxFront.map.dispose(); boxFront.map = wordmarkTexture(); boxFront.needsUpdate = true; resize(); section.classList.add('story-ready'); });
   resize();
 }
