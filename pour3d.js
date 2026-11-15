@@ -86,16 +86,27 @@ function init(section) {
   const swirl = new THREE.Mesh(new THREE.CircleGeometry(innerR(LEVEL) - 0.01, 64), new THREE.MeshBasicMaterial({ map: swirlTex, transparent: true, depthWrite: false, opacity: 0, color: '#ffffff' }));
   swirl.rotation.x = -Math.PI / 2; swirl.position.y = LEVEL + 0.003; scene.add(swirl);
 
-  // powder: a cloud of fine particles that blooms through the milk and is stirred in
-  const dot = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
-  const NCLOUD = 900, cloudPos = new Float32Array(NCLOUD * 3);
-  const cloud = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.11, map: dot, transparent: true, depthWrite: false, opacity: 0, color: '#7e9a4c' }));
-  cloud.geometry.setAttribute('position', new THREE.BufferAttribute(cloudPos, 3)); scene.add(cloud);
-  cloud.material.depthTest = false; cloud.renderOrder = 2.5;   // the bloom shows through the milk
-  // the falling stream
-  const NSTREAM = 500, streamPos = new Float32Array(NSTREAM * 3);
-  const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.055, map: dot, transparent: true, depthWrite: false, color: '#7e9a4c' }));
-  stream.geometry.setAttribute('position', new THREE.BufferAttribute(streamPos, 3)); scene.add(stream);
+  // powder: a soft dot sprite shared by the stream and the puff
+  const dot = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.5, 'rgba(255,255,255,.6)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  // the falling stream: a narrow, continuous fall of powder from the mouth of the stick to the milk
+  const NSTREAM = 1400, streamPos = new Float32Array(NSTREAM * 3);
+  const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.05, map: dot, transparent: true, depthWrite: false, color: '#7e9a4c' }));
+  stream.geometry.setAttribute('position', new THREE.BufferAttribute(streamPos, 3)); stream.renderOrder = 6; stream.frustumCulled = false;
+  // the puff where it lands: fine dust lifting off the surface
+  const NPUFF = 220, puffPos = new Float32Array(NPUFF * 3);
+  const puff = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.08, map: dot, transparent: true, depthWrite: false, opacity: 0, color: '#b8c98c' }));
+  puff.geometry.setAttribute('position', new THREE.BufferAttribute(puffPos, 3)); puff.renderOrder = 6; puff.frustumCulled = false;
+  // the powder raft: it floats on the milk as a speckled layer, grows as it pours, then is stirred in
+  const raftTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+    const r = g.createRadialGradient(256, 256, 40, 256, 256, 256); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.6, 'rgba(255,255,255,.9)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 512, 512);
+    g.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 1800; i++) { const a = rnd(i) * Math.PI * 2, d = Math.sqrt(rnd(i + 1)) * 250; g.fillStyle = `rgba(0,0,0,${0.1 + rnd(i + 2) * 0.25})`; g.beginPath(); g.arc(256 + Math.cos(a) * d, 256 + Math.sin(a) * d, 1 + rnd(i + 3) * 4, 0, 7); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const raft = new THREE.Mesh(new THREE.CircleGeometry(innerR(LEVEL) - 0.01, 64), new THREE.MeshStandardMaterial({ map: raftTex, transparent: true, depthWrite: false, roughness: 1, color: '#7e9a4c', opacity: 0 }));
+  raft.rotation.x = -Math.PI / 2; raft.position.y = LEVEL + 0.004; raft.renderOrder = 3; scene.add(raft);
 
   /* ---------- ice: rounded cubes of clear ice ---------- */
   function roundedCube(size, r) {
@@ -146,7 +157,7 @@ function init(section) {
     m.rotation.x = -Math.PI / 2; m.position.set(0.18, 0.002, 0.1); return m;
   })();
   scene.add(shadow);
-  world.add(glass, liquid, swirl, cloud, stream, ...ices, spoon, shadow);
+  world.add(glass, liquid, swirl, raft, stream, puff, ...ices, spoon, shadow);
 
   /* ---------- flavor buttons ---------- */
   section.querySelectorAll('[data-pour-flavor]').forEach(b => b.addEventListener('click', () => {
@@ -172,7 +183,7 @@ function init(section) {
     const r = canvas.getBoundingClientRect(); W = r.width; Hpx = r.height; narrow = W < 600;
     renderer.setSize(W, Hpx, false);
     camera.aspect = W / Math.max(1, Hpx);
-    camera.position.set(0, 2.5, narrow ? 9.4 : 7.4); camera.lookAt(0, 1.55, 0);
+    camera.position.set(0, 3.5, narrow ? 9.6 : 7.7); camera.lookAt(0, 1.6, 0);
     camera.updateProjectionMatrix(); draw();
   }
   function progress() {
@@ -202,18 +213,24 @@ function init(section) {
     const stir = seg(p, 0.66, 0.96);
     const mixed = smooth(seg(p, 0.66, 0.9));
 
-    // liquid color: milk, a little tint as powder lands, the full flavor once stirred
+    // liquid color: stays milk while the powder floats on top, turns to the flavor as it is stirred
     powder.set(D.powder);
-    liquidCol.copy(MILK).lerp(new THREE.Color(D.liquid), clamp(poured * 0.25 + mixed * 0.75));
+    liquidCol.copy(MILK).lerp(new THREE.Color(D.liquid), clamp(poured * 0.06 + mixed * 0.94));
     liquidMat.color.copy(liquidCol);
 
-    // stick: drops in beside the glass, cap tears off on a hinge, tilts over the rim, pours, leaves
-    const sh = (BODY_H / 2 + CAP_H) * 0.62;
+    // stick: drops in beside the glass, cap tears off on a hinge, tips over the rim so its mouth
+    // sits just above the glass, taps out its powder, and leaves
+    const pouring = smooth(seg(p, 0.4, 0.44)) * (1 - smooth(seg(p, 0.56, 0.6)));
+    const tap = pouring * (Math.sin(t * 17) * 0.025 + Math.sin(t * 5.3) * 0.015);
     const rest = new THREE.Vector3(-1.45, 2.0 + (1 - enter) * 3, 0.2);
-    const over = new THREE.Vector3(-0.3, H + 0.85, 0.1);
-    stick.position.lerpVectors(rest, over, tilt);
+    stick.position.copy(rest);
+    stick.rotation.set(0, lerp(0.35, 0.05, tilt), lerp(lerp(0.25, 0.08, enter), -2.2, tilt) + tap + leave * -0.5);
+    stick.updateMatrix();
+    // place it by its mouth: aim the opening at a point just over the glass, a little left of center
+    const aim = new THREE.Vector3(0.12, H + 0.32, 0.08);
+    const m0 = tmp.set(0, BODY_H / 2, 0).applyMatrix4(stick.matrix);
+    stick.position.addScaledVector(aim.sub(m0), tilt);
     stick.position.x += leave * 2.2; stick.position.y += leave * 2.4;
-    stick.rotation.set(0, lerp(0.35, 0.1, tilt), lerp(lerp(0.25, 0.08, enter), -2.35, tilt) + leave * -0.6);
     const cap = stick.userData.cap;
     const peel = smooth(seg(tear, 0, 0.5)), drop = smooth(seg(tear, 0.5, 1));
     cap.position.copy(cap.userData.home);
@@ -221,41 +238,43 @@ function init(section) {
     cap.position.x += peel * 0.18 + drop * 0.5; cap.position.y += peel * 0.05 - drop * drop * 3.5;
     cap.visible = drop < 0.98;
     stick.visible = leave < 0.99;
-
-    // the opening of the stick in world space (top of the body)
     stick.updateMatrix();
-    const mouth = tmp.set(0, BODY_H / 2, 0).applyMatrix4(stick.matrix);   // in the glass's own frame
+    const mouth = tmp.set(0, BODY_H / 2 - 0.02, 0).applyMatrix4(stick.matrix);   // in the glass's own frame
 
-    // powder stream from the mouth into the glass
-    const streamOn = p > 0.38 && p < 0.62;
-    stream.visible = streamOn;
+    // the stream: particles flow continuously from the mouth and fall under gravity
+    stream.visible = pouring > 0.01;
     stream.material.color.copy(powder);
-    if (streamOn) {
+    const land = new THREE.Vector3(0.07, LEVEL + 0.01, 0.04);   // fixed: where the stream meets the milk
+    if (stream.visible) {
       for (let i = 0; i < NSTREAM; i++) {
-        const t0 = 0.39 + (i / NSTREAM) * 0.17, u = (p - t0) / 0.06;
-        if (u <= 0 || u >= 1) { streamPos[i * 3 + 1] = -99; continue; }
-        const spread = (rnd(i) - 0.5) * 0.12, jit = (rnd(i + 7) - 0.5) * 0.06;
-        streamPos[i * 3] = lerp(mouth.x + spread * 0.3, spread * 1.6, u) + Math.sin(t * 6 + i) * 0.01;
-        streamPos[i * 3 + 1] = lerp(mouth.y, LEVEL + 0.02, u * u);
-        streamPos[i * 3 + 2] = lerp(mouth.z, jit * 3, u);
+        if (rnd(i + 11) > pouring) { streamPos[i * 3 + 1] = -99; continue; }        // thins out at the start and end
+        const f = (rnd(i) + t * 1.4) % 1, ff = f * f;
+        const r = (0.016 + f * 0.045) * Math.sqrt(rnd(i + 5)), a = rnd(i + 9) * Math.PI * 2;
+        streamPos[i * 3] = lerp(mouth.x, land.x, f) + Math.cos(a) * r;
+        streamPos[i * 3 + 1] = lerp(mouth.y, land.y, ff * 0.85 + f * 0.15);
+        streamPos[i * 3 + 2] = lerp(mouth.z, land.z, f) + Math.sin(a) * r;
       }
       stream.geometry.attributes.position.needsUpdate = true;
     }
-
-    // cloud: blooms through the milk, then spirals and dissolves as it is stirred
-    const bloom = poured * (1 - mixed);
-    cloud.material.opacity = 0.85 * bloom;
-    cloud.material.color.copy(powder);
-    cloud.visible = bloom > 0.01;
-    if (cloud.visible) {
-      for (let i = 0; i < NCLOUD; i++) {
-        const depth = rnd(i + 3), ang = rnd(i) * Math.PI * 2 + stir * 9 * (1 - depth * 0.5);
-        const y = lerp(LEVEL - 0.05, LEVEL - 0.05 - (LEVEL - BASE - 0.1) * depth * (0.3 + poured * 0.7), 1);
-        const rr = (innerR(y) - 0.05) * Math.sqrt(rnd(i + 1)) * lerp(0.35 + depth * 0.4, 1, stir);
-        cloudPos[i * 3] = Math.cos(ang) * rr; cloudPos[i * 3 + 1] = y + Math.sin(t * 0.8 + i) * 0.01; cloudPos[i * 3 + 2] = Math.sin(ang) * rr;
+    // the puff: dust lifts where the stream hits the milk
+    puff.material.opacity = 0.5 * pouring;
+    puff.material.color.copy(new THREE.Color(D.dust));
+    puff.visible = pouring > 0.01;
+    if (puff.visible) {
+      for (let i = 0; i < NPUFF; i++) {
+        const f = (rnd(i + 21) + t * 0.6) % 1, a = rnd(i + 23) * Math.PI * 2, r = 0.04 + f * (0.18 + rnd(i + 25) * 0.2);
+        puffPos[i * 3] = land.x + Math.cos(a) * r; puffPos[i * 3 + 1] = LEVEL + 0.02 + f * (0.08 + rnd(i + 27) * 0.22) * (1 - f * 0.4); puffPos[i * 3 + 2] = land.z + Math.sin(a) * r;
       }
-      cloud.geometry.attributes.position.needsUpdate = true;
+      puff.geometry.attributes.position.needsUpdate = true;
     }
+    // the raft: grows under the stream, then is dragged round by the spoon and sinks in
+    const raftAmt = poured * (1 - smooth(seg(p, 0.7, 0.9)));
+    raft.visible = raftAmt > 0.01;
+    raft.material.opacity = raftAmt;
+    raft.material.color.copy(powder);
+    raft.scale.setScalar(lerp(0.25, 1, smooth(clamp(poured * 1.2))) * lerp(1, 0.6, mixed));
+    raft.position.x = land.x * (1 - stir); raft.position.z = land.z * (1 - stir);
+    raft.rotation.z = -stir * 10;
     swirl.material.opacity = 0.75 * Math.sin(stir * Math.PI);
     swirl.material.color.copy(powder).lerp(new THREE.Color('#ffffff'), 0.35);
     swirl.rotation.z = -stir * 14;
