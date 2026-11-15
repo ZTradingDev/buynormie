@@ -401,7 +401,7 @@ function boot(section) {
       const vis = clamp(Math.min(i === 0 ? seg(u, -0.18, 0.1) : seg(u, 0, 0.14), 1 - seg(u, 0.84, 1.0)));   // gone by u = 1: the breath before the next flavor
       c.h.rig.visible = c.group.visible = vis > 0.001;
       if (u >= 0 && u < 1) flavor = c.key;
-      if (!c.group.visible) { const cd = cards[i]; if (cd) { cd.style.visibility = 'hidden'; cd.style.opacity = 0; } return; }
+      if (!c.group.visible) { const cd = cards[i]; if (cd) { cd.style.visibility = 'hidden'; cd.style.opacity = 0; cd.classList.remove('is-in'); } return; }
       // no string here: the stick simply appears in its card, turns slowly, and goes
       const appear = i === 0 ? (x >= 1.5 ? 1 : 0) : smooth(seg(u, 0, 0.16)), go = smooth(seg(u, 0.8, 0.98));
       c.h.string.visible = false;
@@ -435,6 +435,7 @@ function boot(section) {
         const o = clamp(Math.min(seg(u, 0.04, 0.2), 1 - seg(u, 0.76, 0.92)));
         card.style.left = `${sx.toFixed(1)}px`; card.style.top = `${sy.toFixed(1)}px`;
         card.style.opacity = o.toFixed(3); card.style.visibility = o > 0.01 ? 'visible' : 'hidden';
+        if (o > 0.6) card.classList.add('is-in'); else if (o < 0.05) card.classList.remove('is-in');   // replays the icon pop each visit
         card.style.transform = `translate(-50%, ${((1 - o) * 24).toFixed(1)}px)`;
       }
     });
