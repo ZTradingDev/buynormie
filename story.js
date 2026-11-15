@@ -74,7 +74,7 @@ function boot(section) {
   const pendulum = (u, amp, freq, damp) => amp * Math.exp(-damp * u) * Math.sin(u * freq);
   // three hanging sticks that swing and collide (equal mass, slightly lossy hits). Stepped forward
   // from SIM_X0 by scroll, so any scroll position always gives the same frame.
-  const SIM_X0 = 1.08, SIM_K = 22, SIM_DT = 1 / 240, MASS = [1, 1.6, 1.6];
+  const TAU = Math.PI * 2, HAND = 0.58, SIM_X0 = 1.08, SIM_K = 22, SIM_DT = 1 / 240, MASS = [1, 1.6, 1.6];
   const sim = { key: '', x: 0, th: [0, 0, 0], w: [0, 0, 0] };
   function trioSim(x, px, L, dmin, pull) {
     if (x <= SIM_X0) return [0, 0, 0];
@@ -329,15 +329,15 @@ function boot(section) {
     const stageX = narrow ? 0 : Math.min(1.4, halfW * 0.28);
     const chapterX = i => (i === 1 ? -1 : 1) * stageX;
 
+    let soloPose = null;
     // ----- 1. open on the wordmark with a hairline running off the bottom of the screen;
     //         scrolling reels the stick up into view, it swings, turns, and lifts out -----
     {
       const u = seg(x, T.solo[0], T.solo[1]);
       const sinceLoad = reduced ? 9 : (time - bootTime) / 1000;
       const rise = smooth(seg(x, 0.04, 0.34));               // 0: stick waits below the fold
-      const leave = smooth(seg(x, 0.58, 0.8));
-      const vis = x < 0.82;
-      solo.rig.visible = vis;
+      const vis = x < 0.95;
+      solo.rig.visible = x < HAND;                            // past HAND the trio's matcha carries on as this same stick
       if (vis) {
         // anchor: just under the "scroll" label, measured from the page so it lines up at any size
         let anchor = -halfH * 0.45;
@@ -345,7 +345,8 @@ function boot(section) {
         const below = -halfH - TOP - 0.4;                      // the stick waits below the fold
         const lift = (0.15 - below) * rise;                    // scrolling pulls the whole string up
         const swing = rise * (pendulum(u * 2.4 + 0.1, 0.16, 9, 2.2) + Math.sin(t * 1.1) * 0.03) + (1 - rise) * (Math.sin(sinceLoad * 1.9) * 0.012 + Math.sin(sinceLoad * 0.7) * 0.006);
-        hang(solo, 0, below + lift + leave * 6, swing, rise * (u * Math.PI * 2.1) + Math.sin(t * 0.45) * 0.3 * rise, 0, 1, anchor + lift + leave * 6);
+        soloPose = [0, below + lift, swing, rise * (u * Math.PI * 2.1) + Math.sin(t * 0.45) * 0.3 * rise, 0, 1, anchor + lift];
+        if (solo.rig.visible) hang(solo, ...soloPose);
       }
     }
     // ----- 2. three sticks on strings over the wordmark -----
@@ -362,14 +363,25 @@ function boot(section) {
       const th = trioSim(x, px, L, dmin, pull);
       const windup = pull * smooth(seg(x, 0.95, SIM_X0));
       trio.forEach((h, i) => {
-        h.rig.visible = vis && !(i === 0 && x >= 1.5);
+        h.rig.visible = vis && !(i === 0 && (x >= 1.5 || x < HAND));
         if (!h.rig.visible) return;
         const idle = Math.sin(t * 0.7 + i) * 0.008;
         if (i === 0) {
           const swing = x < SIM_X0 ? windup : th[0];
           const tx = chapterX(0), ty = -0.05;
+          const turn0 = lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5)));
+          // the landing stick itself walks over into the lineup: one matcha, never two
+          const join = smooth(seg(x, HAND, 0.95));
+          if (join < 1 && soloPose) {
+            const [sx, sy, sw, st, , ssc, sp] = soloPose;
+            const stw = turn0 + (((st - turn0) % TAU) + TAU + Math.PI) % TAU - Math.PI;   // unwind by the short way round
+            hang(h, lerp(sx, px[0], join), lerp(sy, py[0], join), lerp(sw, swing + idle, join), lerp(stw, turn0, join),
+              tilts[0] * join, lerp(ssc, sc, join), lerp(sp, PIVOT, join));
+            h.string.material = stringMat;
+            return;
+          }
           hang(h, lerp(px[0], tx, carry), lerp(py[0], ty, carry), lerp(swing + idle, 0, carry),
-            lerp(lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))), -0.444, carry), tilts[0] * (1 - carry), lerp(sc, 0.8, carry));
+            lerp(turn0, -0.444, carry), tilts[0] * (1 - carry), lerp(sc, 0.8, carry));
           h.string.material = carry > 0.55 ? hiddenString : stringMat;
           return;
         }
