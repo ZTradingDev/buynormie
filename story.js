@@ -60,14 +60,15 @@ function boot(section) {
     return { rig, stick, string };
   }
   // place a hanger so the stick's center sits at (x, y); sway rotates around the pivot
-  function hang(h, x, y, sway, turn, tilt = 0) {
+  function hang(h, x, y, sway, turn, tilt = 0, sc = 1) {
     const L = PIVOT - y;
+    h.stick.scale.setScalar(S * sc);
     h.rig.position.set(x, PIVOT, 0);
     h.rig.rotation.z = sway;
     h.stick.position.set(0, -L, 0);
     h.stick.rotation.set(0.03, turn, tilt);
-    h.string.position.set(0, -L + TOP * Math.cos(tilt) - 0.01, 0);
-    h.string.scale.y = Math.max(0.01, L - TOP);
+    h.string.position.set(0, -L + TOP * sc * Math.cos(tilt) - 0.01, 0);
+    h.string.scale.y = Math.max(0.01, L - TOP * sc);
   }
   const pendulum = (u, amp, freq, damp) => amp * Math.exp(-damp * u) * Math.sin(u * freq);
 
@@ -219,9 +220,10 @@ function boot(section) {
     // twelve sticks: three rows of four, like the real pouch
     const sticks = [];
     for (let i = 0; i < 12; i++) {
-      const st = makePacket(key); st.scale.setScalar(0.5);
+      const st = makePacket(key); st.scale.setScalar(0.44);
       const row = Math.floor(i / 4), col = i % 4;
-      st.userData.slot = new THREE.Vector3((col - 1.5) * 0.43 + (row === 1 ? 0.12 : 0), -PHT / 2 + 0.06 + (BODY_H / 2 + CAP_H) * 0.5 + row * 0.04, (1 - row) * 0.17);
+      // rows sit fully inside the film: bottoms clear of the base seal, tops below the zipper, rows close together
+      st.userData.slot = new THREE.Vector3((col - 1.5) * 0.44 + (row === 1 ? 0.1 : 0), -PHT / 2 + 0.3 + BODY_H / 2 * 0.44 + row * 0.03, (1 - row) * 0.09);
       st.position.copy(st.userData.slot); g.add(st); sticks.push(st);
     }
     // fill order: back row first so the front row lands last, in plain view
@@ -286,38 +288,36 @@ function boot(section) {
     const halfH = Math.tan(THREE.MathUtils.degToRad(16)) * camera.position.z, halfW = halfH * aspect;
     const stageX = narrow ? 0 : Math.min(1.4, halfW * 0.28);
 
-    // ----- 1. the solo stick: swings in, turns, lifts out -----
+    // ----- 1. open on the wordmark with a hairline running off the bottom of the screen;
+    //         scrolling reels the stick up into view, it swings, turns, and lifts out -----
     {
-      // on load the stick drops in by itself and keeps swaying, so the first screen is never empty;
-      // scrolling then spins it and lifts it out
       const u = seg(x, T.solo[0], T.solo[1]);
       const sinceLoad = reduced ? 9 : (time - bootTime) / 1000;
-      const drop = smooth(clamp(sinceLoad / 1.6));
-      const leave = smooth(seg(x, 0.55, 0.78));
-      const vis = x < 0.8;
+      const rise = smooth(seg(x, 0.04, 0.34));               // 0: stick waits below the fold
+      const leave = smooth(seg(x, 0.58, 0.8));
+      const vis = x < 0.82;
       solo.rig.visible = vis;
       if (vis) {
-        const y = 0.15 + (1 - drop) * 4.5 + leave * 6;
-        const swing = pendulum(sinceLoad + 0.15, 0.2, 4.2, 0.9) + Math.sin(t * 1.1) * 0.035 * drop;
-        hang(solo, narrow ? 0 : 0.2, y,
-          swing + pendulum(u * 2.4, 0.18, 9, 2.2),
-          u * Math.PI * 2.3 + Math.sin(t * 0.45) * 0.35);
+        const below = -halfH - TOP - 0.3;
+        const y = lerp(below, 0.15, rise) + leave * 6;
+        const swing = rise * (pendulum(u * 2.4 + 0.1, 0.16, 9, 2.2) + Math.sin(t * 1.1) * 0.03) + (1 - rise) * Math.sin(sinceLoad * 1.3) * 0.004;
+        hang(solo, 0, y, swing, rise * (u * Math.PI * 2.1) + Math.sin(t * 0.45) * 0.3 * rise);
       }
     }
     // ----- 2. three sticks on strings over the wordmark -----
     {
       const vis = x > 0.45 && x < 1.75;
       const spread = narrow ? Math.min(1.0, halfW * 0.5) : Math.min(2.3, halfW * 0.36);
-      const tilts = [-0.12, 0.03, 0.14], heights = [0.55, 0.3, 0.45], delays = [0, 0.1, 0.05];
+      const tilts = [-0.08, 0.02, 0.09], heights = [0.95, 0.8, 0.9], delays = [0, 0.1, 0.05];
       trio.forEach((h, i) => {
         h.rig.visible = vis;
         if (!vis) return;
         const enter = smooth(seg(x, 0.6 + delays[i], 0.95 + delays[i]));
         const leave = smooth(seg(x, 1.3 + delays[i] * 0.5, 1.6 + delays[i] * 0.5));
         const settle = clamp(x - 0.6 - delays[i]);
-        hang(h, (i - 1) * spread, heights[i] - (narrow ? 0.9 : 0.25) + (1 - enter) * 5 + leave * 6,
+        hang(h, (i - 1) * spread, heights[i] + (narrow ? 0.35 : 0) + (1 - enter) * 5 + leave * 6,
           pendulum(settle * 2, 0.07, 11, 3) + Math.sin(t * 0.7 + i) * 0.008,
-          lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5));
+          lerp(-0.3, 0.3, smooth(seg(x, 0.6, 1.5))) + i * 0.15, tilts[i] * (1 - leave * 0.5), 0.68);
       });
     }
     // ----- 3. the flavor chapters -----
@@ -333,7 +333,8 @@ function boot(section) {
       c.h.string.visible = false;
       hang(c.h, stageX, -0.05 - (1 - appear) * 0.25 + go * 0.25, 0,
         lerp(-0.45, 0.45, smooth(seg(u, 0, 1))) + Math.sin(t * 0.5 + i) * 0.03);
-      c.h.stick.scale.setScalar(S * Math.max(0.0001, lerp(0.9, 1, appear) * (1 - go * 0.1)) * (appear * (1 - go) > 0.001 ? 1 : 0.0001));
+      const csc = 0.8 * lerp(0.94, 1, appear);
+      c.h.stick.scale.setScalar(appear * (1 - go) > 0.001 ? S * csc : 0.0001);
       c.bits.forEach(m => {
         const d = m.userData;
         const travel = (u - 0.5) * 9 * lerp(0.2, 0.6, d.depth);
@@ -344,15 +345,19 @@ function boot(section) {
       // the post card frames the stick: it follows the stick's projected position
       const card = cards[i];
       if (card) {
-        const [sx, sy] = toScreen(stageX, -0.05);
-        const [, st] = toScreen(stageX, -0.05 + TOP), [, sb] = toScreen(stageX, -0.05 - TOP);
-        const mediaH = (sb - st) * 1.12, mediaW = mediaH * 0.72;
+        // the stick's real extent: cap crimp on top, bottom crimp below (the model is not centered)
+        const sc8 = S * 0.8, cy = -0.05;
+        const [sx] = toScreen(stageX, cy);
+        const [, st] = toScreen(stageX, cy + (BODY_H / 2 + CAP_H) * sc8), [, sb] = toScreen(stageX, cy - (BODY_H / 2 + 0.12) * sc8);
+        const pad = (sb - st) * 0.1;
+        const mediaH = (sb - st) + pad * 2, mediaW = mediaH * 0.74;
         card.style.setProperty('--media-w', `${mediaW.toFixed(0)}px`);
         card.style.setProperty('--media-h', `${mediaH.toFixed(0)}px`);
+        const sy = st - pad - 56;                           // card top: media top minus the header row
         const o = clamp(Math.min(seg(u, 0.02, 0.2), 1 - seg(u, 0.78, 0.95)));
         card.style.left = `${sx.toFixed(1)}px`; card.style.top = `${sy.toFixed(1)}px`;
         card.style.opacity = o.toFixed(3); card.style.visibility = o > 0.01 ? 'visible' : 'hidden';
-        card.style.transform = `translate(-50%, calc(-1 * var(--media-top, 56px) - var(--media-h) / 2)) translateY(${((1 - o) * 24).toFixed(1)}px)`;
+        card.style.transform = `translate(-50%, ${((1 - o) * 24).toFixed(1)}px)`;
       }
     });
     if (!chapters.some(c => c.h.rig.visible)) cards.forEach(c => { c.style.visibility = 'hidden'; c.style.opacity = 0; });
@@ -363,9 +368,9 @@ function boot(section) {
     {
       const u = x - T.end;
       const vis = u > -0.35;
-      const cx = narrow ? 0 : Math.min(1.9, halfW * 0.34);
+      const cx = narrow ? 0 : Math.min(2.1, halfW * 0.4);
       const sc0 = narrow ? 0.72 : 0.92;
-      const lay = [[0, narrow ? 0.55 : -0.45, 0.6, 0, 1], [-2.5, narrow ? 1.0 : 0.05, -2.8, 0.35, 0.8], [2.5, narrow ? 1.0 : 0.05, -2.8, -0.35, 0.8]];
+      const lay = [[0, narrow ? 0.55 : -0.45, 0.6, 0, 1], [-1.85, narrow ? 1.05 : 0.15, -3.2, 0.28, 0.82], [1.85, narrow ? 1.05 : 0.15, -3.2, -0.28, 0.82]];
       pouches.forEach((g, i) => {
         g.visible = shadows[i].visible = vis;
         if (!vis) return;
@@ -399,7 +404,7 @@ function boot(section) {
     words.forEach(w => {
       const k = w.dataset.word;
       let o = 0, s = 1, dy = 0;
-      if (k === 'normie') { o = win(x, 0.8, 1.45, 0.15); s = lerp(0.96, 1.08, smooth(seg(x, 0.8, 1.6))); dy = (1.1 - x) * 6; }
+      if (k === 'normie') { o = 1 - seg(x, 1.35, 1.6); s = lerp(1, 1.06, smooth(seg(x, 0.9, 1.6))); dy = 0; const d = smooth(seg(x, 0.55, 0.9)); w.style.color = `rgb(${Math.round(lerp(139, 48, d))},${Math.round(lerp(141, 66, d))},${Math.round(lerp(125, 54, d))})`; w.style.top = lerp(50, narrow ? 74 : 76, smooth(seg(x, 0.4, 0.8))).toFixed(2) + '%'; }
       else {
         const i = ORDER.indexOf(k), u = x - (T.ch + i * T.chLen);
         o = clamp(Math.min(seg(u, -0.05, 0.15), 1 - seg(u, 0.85, 1.05))); s = lerp(1.06, 1, smooth(clamp(u * 2))); dy = (0.5 - u) * 8;
