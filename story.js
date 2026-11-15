@@ -211,6 +211,7 @@ function boot(section) {
   const win = (x, a, b, f = 0.12) => clamp(Math.min(seg(x, a - f, a + f), 1 - seg(x, b - f, b + f)));
 
   let flavorNow = null, centered = false;
+  const bootTime = performance.now();
   function setFlavor(k) {
     if (k === flavorNow) return;
     flavorNow = k;
@@ -230,15 +231,20 @@ function boot(section) {
 
     // ----- 1. the solo stick: swings in, turns, lifts out -----
     {
+      // on load the stick drops in by itself and keeps swaying, so the first screen is never empty;
+      // scrolling then spins it and lifts it out
       const u = seg(x, T.solo[0], T.solo[1]);
-      const enter = smooth(seg(x, 0, 0.18)), leave = smooth(seg(x, 0.55, 0.78));
+      const sinceLoad = reduced ? 9 : (time - bootTime) / 1000;
+      const drop = smooth(clamp(sinceLoad / 1.6));
+      const leave = smooth(seg(x, 0.55, 0.78));
       const vis = x < 0.8;
       solo.rig.visible = vis;
       if (vis) {
-        const y = lerp(0.15, 0.15, enter) + (1 - enter) * 4 + leave * 6;
+        const y = 0.15 + (1 - drop) * 4.5 + leave * 6;
+        const swing = pendulum(sinceLoad + 0.15, 0.2, 4.2, 0.9) + Math.sin(t * 1.1) * 0.035 * drop;
         hang(solo, narrow ? 0 : 0.2, y,
-          pendulum(u * 2.4 + 0.25, 0.32, 9, 2.2) + Math.sin(t * 0.8) * 0.01,
-          u * Math.PI * 2.3 + Math.sin(t * 0.6) * 0.04);
+          swing + pendulum(u * 2.4, 0.18, 9, 2.2),
+          u * Math.PI * 2.3 + Math.sin(t * 0.45) * 0.35);
       }
     }
     // ----- 2. three sticks on strings over the wordmark -----
