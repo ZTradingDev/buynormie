@@ -328,11 +328,12 @@ function boot(section) {
       c.h.rig.visible = c.group.visible = vis > 0.001;
       if (u >= 0 && u < 1) flavor = c.key;
       if (!c.group.visible) return;
-      const enter = smooth(seg(u, -0.18, 0.16)), leave = smooth(seg(u, 0.86, 1.12));
-      const settle = clamp(u + 0.18);
-      hang(c.h, stageX, -0.05 + (1 - enter) * 5.2 + leave * 6,
-        pendulum(settle, 0.14, 13, 4.2) + Math.sin(t * 0.7 + i) * 0.01,
-        lerp(-0.5, 0.5, smooth(seg(u, 0, 1))) + Math.sin(t * 0.5 + i) * 0.03);
+      // no string here: the stick simply appears in its card, turns slowly, and goes
+      const appear = smooth(seg(u, -0.06, 0.12)), go = smooth(seg(u, 0.86, 1.02));
+      c.h.string.visible = false;
+      hang(c.h, stageX, -0.05 - (1 - appear) * 0.25 + go * 0.25, 0,
+        lerp(-0.45, 0.45, smooth(seg(u, 0, 1))) + Math.sin(t * 0.5 + i) * 0.03);
+      c.h.stick.scale.setScalar(S * Math.max(0.0001, lerp(0.9, 1, appear) * (1 - go * 0.1)) * (appear * (1 - go) > 0.001 ? 1 : 0.0001));
       c.bits.forEach(m => {
         const d = m.userData;
         const travel = (u - 0.5) * 9 * lerp(0.2, 0.6, d.depth);
