@@ -757,3 +757,6 @@ html[data-flavor=coffee]{--f-bg:#efe4d6;--f-ink:#634f3d;--f-tint:#f7f0e6}
 .story-copy-intro .story-kicker{font-size:13px}
 .story-flavor-list{font-size:17px;padding:18px 22px;gap:12px;border-radius:18px}
 .story-flavor-list i{width:12px;height:12px}
+/* "scroll" sits at the very bottom of the screen, the string running down from it to the edge */
+.story-hint{top:auto!important;bottom:calc(64px + env(safe-area-inset-bottom))}
+@media(max-width:800px){.story-hint{bottom:calc(56px + env(safe-area-inset-bottom))}}
