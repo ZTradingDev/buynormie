@@ -6,7 +6,7 @@
 //  4. "it's in the pouch.": a clear zip pouch opens, twelve sticks drop in, it zips shut
 // Every frame is a pure function of scroll progress (plus a tiny idle sway), so scrolling back rewinds exactly.
 import * as THREE from './vendor/three.module.js';
-import { FLAVORS, ORDER, makePacket, BODY_H, CAP_H, W as STICK_W } from './packets3d.js?v=20261115c';
+import { FLAVORS, ORDER, makePacket, BODY_H, CAP_H, W as STICK_W } from './packets3d.js?v=20261116a';
 import { RoomEnvironment } from './vendor/three-addons/environments/RoomEnvironment.js';
 
 const section = document.querySelector('[data-story]');

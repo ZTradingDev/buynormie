@@ -6,7 +6,7 @@ const ROOT = new URL('./', import.meta.url).href;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-import { FLAVORS, ORDER, labelTexture, makePacket, W, D, BODY_H, CAP_H, SEAL } from './packets3d.js?v=20261115c';
+import { FLAVORS, ORDER, labelTexture, makePacket, W, D, BODY_H, CAP_H, SEAL } from './packets3d.js?v=20261116a';
 
 /* ---------- sunlit backdrop (wall + floor with window and branch shadows) ---------- */
 let backdropURL = '';
@@ -371,8 +371,7 @@ function initStudio(root) {
   document.fonts && Promise.all(['700 200px DM','400 30px DM'].map(x => document.fonts.load(x))).then(() => {
     packets.forEach(p => {
       const f = FLAVORS[p.userData.key];
-      p.userData.front.map.dispose(); p.userData.front.map = labelTexture(f, false, p.userData.key); p.userData.front.needsUpdate = true;
-      p.userData.back.map.dispose(); p.userData.back.map = labelTexture(f, true, p.userData.key); p.userData.back.needsUpdate = true;
+      p.userData.back.map.dispose(); p.userData.back.map = labelTexture({ ...f, pack: p.userData.back.map.userData?.pack || f.pack }, true, p.userData.key); p.userData.back.needsUpdate = true;
     });
   }).catch(() => {});
   root.classList.add('studio-ready');

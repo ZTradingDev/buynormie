@@ -1,7 +1,7 @@
 // tear. pour. stir. in three.js: a real glass (physical transmission), ice, milk, the stick, a bar spoon.
 // Every frame is a pure function of scroll progress (plus a tiny idle drift), so scrolling back plays it in reverse.
 import * as THREE from './vendor/three.module.js';
-import { FLAVORS as STICK, makePacket, BODY_H, CAP_H } from './packets3d.js?v=20261115c';
+import { FLAVORS as STICK, makePacket, BODY_H, CAP_H } from './packets3d.js?v=20261116a';
 import { RoomEnvironment } from './vendor/three-addons/environments/RoomEnvironment.js';
 
 const section = document.querySelector('[data-pour]');
