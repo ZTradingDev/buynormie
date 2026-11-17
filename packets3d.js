@@ -84,7 +84,7 @@ export function labelTexture(f, back = false, key = 'matcha') {
   });
   g.restore();
   const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.userData.pack = f.pack;
   return t;
 }
 
@@ -120,14 +120,38 @@ function sealGeo() {
 }
 
 const MATS = {};
+// the front of every stick is the real product render (assets/sticks/<key>-front.webp), straightened to a
+// rectangle; the art runs top crimp, cap, body, bottom crimp, at these rows of the 2048px-tall image
+const ART = { top: 0, cap: 0.0782, body: 0.1677, bottom: 0.9293, end: 1 };
+const SIDE = { matcha: '#b4b886', acai: '#d9a3a1', coffee: '#c99f74' };   // the film colour of the render
+const loader = new THREE.TextureLoader();
+const V = (() => { try { return new URL(import.meta.url).search; } catch (e) { return ''; } })();
+function frontArt(key) {
+  const t = loader.load(new URL(`./assets/sticks/${key}-front.webp${V}`, import.meta.url).href);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+// point the +z face of a box at a band of the front art (v0 at the band's top, v1 at its bottom)
+function mapFront(geo, h, y0, v0, v1, flipX = false) {
+  const grp = geo.groups.find(g => g.materialIndex === 4);
+  const idx = geo.index, pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (let k = grp.start; k < grp.start + grp.count; k++) {
+    const i = idx.getX(k), u = (pos.getX(i) + W / 2) / W, t = (pos.getY(i) - y0) / h;   // t: 0 bottom .. 1 top
+    uv.setXY(i, flipX ? 1 - u : u, 1 - lerpN(v1, v0, t));
+  }
+  uv.needsUpdate = true;
+  return geo;
+}
+const lerpN = (a, b, t) => a + (b - a) * t;
 function mats(key) {
   if (MATS[key]) return MATS[key];
   const f = FLAVORS[key];
-  const soft = { roughness: 0.4, clearcoat: 0.22, clearcoatRoughness: 0.45, sheen: 0.4, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff'), envMapIntensity: 0.3 };
+  const soft = { roughness: 0.42, clearcoat: 0.18, clearcoatRoughness: 0.45, sheen: 0.25, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff'), envMapIntensity: 0.25 };
+  const side = new THREE.MeshPhysicalMaterial({ color: SIDE[key] || f.pack, ...soft });
   return (MATS[key] = {
-    side: new THREE.MeshPhysicalMaterial({ color: f.pack, ...soft }),
-    front: new THREE.MeshPhysicalMaterial({ map: labelTexture(f, false, key), ...soft }),
-    back: new THREE.MeshPhysicalMaterial({ map: labelTexture(f, true, key), ...soft }),
+    side,
+    front: new THREE.MeshPhysicalMaterial({ map: frontArt(key), ...soft }),
+    back: new THREE.MeshPhysicalMaterial({ map: labelTexture({ ...f, pack: SIDE[key] || f.pack }, true, key), ...soft }),
   });
 }
 export function makePacket(key) {
@@ -136,19 +160,18 @@ export function makePacket(key) {
   const group = new THREE.Group();
   group.userData = { key, front, back };
 
-  const body = new THREE.Mesh(pillow(BODY_H, false, true), [side, side, side, side, front, back]);
+  const body = new THREE.Mesh(mapFront(pillow(BODY_H, false, true), BODY_H, -BODY_H / 2, ART.body, ART.bottom), [side, side, side, side, front, back]);
   body.position.y = 0; body.castShadow = true;
   group.add(body);
-  const sealMat = side;
-  const bottomSeal = new THREE.Mesh(sealGeo(), sealMat);
+  const bottomSeal = new THREE.Mesh(mapFront(sealGeo(), SEAL, 0, ART.end, ART.bottom, true), [side, side, side, side, front, side]);
   bottomSeal.rotation.z = Math.PI; bottomSeal.position.y = -BODY_H / 2 + 0.02; bottomSeal.castShadow = true;
   group.add(bottomSeal);
 
   // tear-off cap
   const cap = new THREE.Group();
-  const capBody = new THREE.Mesh(pillow(CAP_H, true, false), side);
+  const capBody = new THREE.Mesh(mapFront(pillow(CAP_H, true, false), CAP_H, -CAP_H / 2, ART.cap, ART.body), [side, side, side, side, front, back]);
   capBody.position.y = CAP_H / 2; capBody.castShadow = true;
-  const topSeal = new THREE.Mesh(sealGeo(), sealMat);
+  const topSeal = new THREE.Mesh(mapFront(sealGeo(), SEAL, 0, ART.top, ART.cap), [side, side, side, side, front, side]);
   topSeal.position.y = CAP_H - 0.02; topSeal.castShadow = true;
   cap.add(capBody, topSeal);
   cap.position.y = BODY_H / 2 + 0.004;
